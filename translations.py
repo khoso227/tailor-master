@@ -103,7 +103,20 @@ TRANSLATIONS = {
         "error_fill": "براہ کرم ضروری معلومات درج کریں!"
     }
 }
-
+TRANSLATIONS = {
+    "English": {
+        "cashbook": "Cashbook 💰", "today_inc": "Today's Income", "today_exp": "Today's Expense", "savings": "Net Savings",
+        "add_exp": "Add Expense", "exp_desc": "Expense Detail", "amount": "Amount", "suits": "Total Suits (Jore)",
+        "acc_no": "Account Number", "acc_name": "Account Holder", "via": "Payment Service", "bal": "Remaining Balance",
+        # ... baaki purani keys ...
+    },
+    "Urdu": {
+        "cashbook": "روزنامچہ (کیش بک) 💰", "today_inc": "آج کی آمدنی", "today_exp": "آج کا خرچہ", "savings": "آج کی بچت",
+        "add_exp": "خرچہ درج کریں", "exp_desc": "خرچے کی تفصیل", "amount": "رقم", "suits": "کل جوڑے",
+        "acc_no": "اکاؤنٹ نمبر", "acc_name": "اکاؤنٹ ہولڈر کا نام", "via": "سروس (جاز کیش/بینک)", "bal": "باقیہ رقم",
+    }
+}
 # Helper function for modular files
 def get_text(lang):
     return TRANSLATIONS.get(lang, TRANSLATIONS["English"])
+

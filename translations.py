@@ -1,47 +1,20 @@
-def get_text(lang):
-    urdu = {
-        "title": "ٹیلر ماسٹر پرو", "login": "لاگ ان", "register": "نیا اکاؤنٹ بنائیں",
-        "forgot": "پاس ورڈ بھول گئے؟", "email": "ای میل", "pass": "پاس ورڈ",
-        "shop": "دکان کا نام", "phone": "موبائل نمبر", "s_q": "سیکیورٹی سوال", "s_a": "جواب",
-        "dash": "ڈیش بورڈ", "new_order": "نیا آرڈر", "reports": "رپورٹس", "security": "سیکیورٹی",
-        "cust_name": "گاہک کا نام", "total": "کل بل", "advance": "ایڈوانس",
-        "rem": "باقی رقم", "pay_mode": "ادائیگی کا طریقہ", "del_date": "ڈیلیوری کی تاریخ",
-        "meas": "پیمائش (Measurements)", "styles": "ڈیزائن اور اسٹائل", "save": "آرڈر محفوظ کریں",
-        "verbal": "زبانی ہدایات (Special Notes)", "extra": "اضافی ضرورت",
-        # Measurements Labels
-        "len": "لمبائی (Length)", "slv": "آستین (Sleeves)", "shl": "تیرا (Shoulder)",
-        "col": "گلا (Collar)", "chst": "چھاتی (Chest)", "l_chst": "گھیرا (Lower Chest)",
-        "wst": "کمر (Waist)", "hip": "ہپ (Hip)", "shl_len": "شلوار لمبائی",
-        "shl_bot": "پانچہ (Bottom)", "paj_len": "پاجامہ لمبائی", "paj_wst": "پاجامہ کمر",
-        "paj_hip": "پاجامہ ہپ", "paj_thi": "تھائی (Thigh)", "paj_bot": "پاجامہ پانچہ",
-        "fly": "فلائی (Fly)", "shirt_len": "شرٹ لمبائی",
-        # Style Labels
-        "sh_col": "شرٹ کالر", "sw_col": "شیروانی کالر", "cuf": "کف آستین",
-        "kur_slv": "کرتہ آستین", "round": "گول دامن", "square": "چکور دامن",
-        "fit": "فٹنگ (Fitting)", "double": "ڈبل سلائی", "gum": "گم سلائی",
-        "remind": "پیمنٹ ریمائنڈر", "delete": "حذف کریں", "status": "حالت"
+TRANSLATIONS = {
+    "English": {
+        "title": "Tailor Master Pro 👔", "email": "Email Address", "pass": "Password", "login_btn": "Login Now",
+        "reg_btn": "Register Shop", "forgot_btn": "Forgot Password?", "dash": "Dashboard", "order": "New Order ➕",
+        "report": "Reports 📋", "sec": "Security ⚙️", "logout": "Logout 🚪", "shuffle": "🔀 Shuffle",
+        "c_name": "Client Name", "c_phone": "Phone", "measure": "Measurements", "len": "Length", "sh": "Shoulder",
+        "ch": "Chest", "ws": "Waist", "sl": "Sleeves", "nk": "Neck", "bt": "Bottom/Pancha", "thi": "Thigh", "fly": "Fly",
+        "pay": "Payment Method", "bill": "Total Bill", "adv": "Advance", "save": "Save Order ✅",
+        "rename": "Rename Shop", "update": "Update Name", "style": "Design & Style"
+    },
+    "Urdu": {
+        "title": "ٹیلر ماسٹر پرو 👔", "email": "ای میل", "pass": "پاس ورڈ", "login_btn": "لاگ ان کریں",
+        "reg_btn": "رجسٹریشن", "forgot_btn": "پاس ورڈ بھول گئے؟", "dash": "ڈیش بورڈ", "order": "نیا آرڈر ➕",
+        "report": "رپورٹس 📋", "sec": "سیکیورٹی ⚙️", "logout": "لاگ آؤٹ 🚪", "shuffle": "تبدیل کریں 🔀",
+        "c_name": "گاہک کا نام", "c_phone": "فون نمبر", "measure": "پیمائش", "len": "لمبائی", "sh": "تیرا/کندھا",
+        "ch": "چھاتی", "ws": "کمر", "sl": "آستین", "nk": "گلا/کالر", "bt": "پانچہ/گھیرا", "thi": "تھائی", "fly": "فلائی",
+        "pay": "ادائیگی کا طریقہ", "bill": "کل بل", "adv": "ایڈوانس", "save": "آرڈر محفوظ کریں ✅",
+        "rename": "دکان کا نام تبدیل کریں", "update": "اپ ڈیٹ کریں", "style": "ڈیزائن اور اسٹائل"
     }
-    
-    english = {
-        "title": "Tailor Master Pro", "login": "Login", "register": "Create Free Account",
-        "forgot": "Forgot Password?", "email": "Email Address", "pass": "Password",
-        "shop": "Shop Name", "phone": "Mobile Number", "s_q": "Security Question", "s_a": "Answer",
-        "dash": "Dashboard", "new_order": "New Order", "reports": "Reports", "security": "Security",
-        "cust_name": "Customer Name", "total": "Total Bill", "advance": "Advance",
-        "rem": "Remaining", "pay_mode": "Payment Mode", "del_date": "Delivery Date",
-        "meas": "Measurements", "styles": "Styles & Design", "save": "Save Order",
-        "verbal": "Verbal Instructions", "extra": "Extra Requirement",
-        # Measurements Labels
-        "len": "Length", "slv": "Sleeves", "shl": "Shoulder", "col": "Collar",
-        "chst": "Chest", "l_chst": "Lower Chest", "wst": "Waist", "hip": "Hip",
-        "shl_len": "Shalwar Length", "shl_bot": "Bottom (Pancha)",
-        "paj_len": "Pajama Length", "paj_wst": "Pajama Waist",
-        "paj_hip": "Pajama Hip", "paj_thi": "Thigh", "paj_bot": "Pajama Bottom",
-        "fly": "Fly", "shirt_len": "Shirt Length",
-        # Style Labels
-        "sh_col": "Shirt Collar", "sw_col": "Sherwani Collar", "cuf": "Cuff Sleeve",
-        "kur_slv": "Kurta Sleeve", "round": "Round Ghera", "square": "Square Ghera",
-        "fit": "Fitting", "double": "Double Stitch", "gum": "Gum Silai",
-        "remind": "Send Reminder", "delete": "Delete Shop", "status": "Status"
-    }
-    return urdu if lang == "Urdu" else english
+}

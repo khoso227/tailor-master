@@ -9,7 +9,6 @@ st.set_page_config(page_title="Tailor Master Pro", layout="wide", page_icon="�
 
 def get_connection():
     conn = sqlite3.connect("tailor_master.db", check_same_thread=False)
-    # Create Users Table if not exists
     conn.execute("""
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT, 
@@ -23,175 +22,179 @@ def get_connection():
             status TEXT DEFAULT 'Active'
         )
     """)
-    conn.commit()
+    # 🔥 AUTO-CREATE ADMIN (Agar database khali ho)
+    admin_check = conn.execute("SELECT id FROM users WHERE email='admin@sahilarman.com'").fetchone()
+    if not admin_check:
+        conn.execute("""
+            INSERT INTO users (email, password, shop_name, role, status) 
+            VALUES ('admin@sahilarman.com', 'sahilarman2026', 'Super Admin', 'super_admin', 'Active')
+        """)
+        conn.commit()
     return conn
 
 conn = get_connection()
 
-# --- 2. THEME & WALLPAPER LOGIC ---
+# --- 2. BILINGUAL SUPPORT (Urdu + English) ---
+if 'lang' not in st.session_state: st.session_state.lang = "English"
+
+translations = {
+    "English": {
+        "title": "🔑 Login - Tailor Master Pro",
+        "email": "Email / Username",
+        "pass": "Password",
+        "login_btn": "Login Now",
+        "reg_btn": "Register New Shop",
+        "forgot_btn": "Forgot Password?",
+        "dash": "Dashboard",
+        "order": "New Order",
+        "report": "Reports",
+        "sec": "Security / Settings",
+        "lang_label": "Language 🌐",
+        "theme_label": "Theme Mood 🎨",
+        "logout": "Logout 🚪",
+        "shuffle": "🔀 Shuffle Wallpaper"
+    },
+    "Urdu": {
+        "title": "لاگ ان - ٹیلر ماسٹر پرو 🔑",
+        "email": "ای میل یا یوزر نیم",
+        "pass": "پاس ورڈ",
+        "login_btn": "لاگ ان کریں",
+        "reg_btn": "نئی دکان رجسٹر کریں",
+        "forgot_btn": "پاس ورڈ بھول گئے؟",
+        "dash": "ڈیش بورڈ",
+        "order": "نیا آرڈر",
+        "report": "رپورٹس",
+        "sec": "سیکورٹی / سیٹنگز",
+        "lang_label": "زبان 🌐",
+        "theme_label": "تھیم موڈ 🎨",
+        "logout": "لاگ آؤٹ 🚪",
+        "shuffle": "وال پیپر تبدیل کریں 🔀"
+    }
+}
+
+ln = translations[st.session_state.lang]
+
+# --- 3. THEME & 20 WALLPAPERS LOGIC ---
 def apply_custom_style():
     day_wallpapers = [
-        "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?q=80&w=2000",
-        "https://images.unsplash.com/photo-1520004434532-668416a08753?q=80&w=2000",
-        "https://images.unsplash.com/photo-1544441893-675973e31985?q=80&w=2000",
-        "https://images.unsplash.com/photo-1594932224828-b4b059b6f684?q=80&w=2000",
-        "https://images.unsplash.com/photo-1612423284934-2850a4ea6b0f?q=80&w=2000",
-        "https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?q=80&w=2000",
-        "https://images.unsplash.com/photo-1534126511673-b68991578f6a?q=80&w=2000",
-        "https://images.unsplash.com/photo-1516762689617-e1cffcef479d?q=80&w=2000",
-        "https://images.unsplash.com/photo-1542060717-d79d9e463a8a?q=80&w=2000",
-        "https://images.unsplash.com/photo-1567401893414-76b7b1e5a7a5?q=80&w=2000"
+        "https://images.unsplash.com/photo-1558769132-cb1aea458c5e", "https://images.unsplash.com/photo-1520004434532-668416a08753",
+        "https://images.unsplash.com/photo-1544441893-675973e31985", "https://images.unsplash.com/photo-1594932224828-b4b059b6f684",
+        "https://images.unsplash.com/photo-1612423284934-2850a4ea6b0f", "https://images.unsplash.com/photo-1489987707025-afc232f7ea0f",
+        "https://images.unsplash.com/photo-1534126511673-b68991578f6a", "https://images.unsplash.com/photo-1516762689617-e1cffcef479d",
+        "https://images.unsplash.com/photo-1542060717-d79d9e463a8a", "https://images.unsplash.com/photo-1567401893414-76b7b1e5a7a5"
     ]
     night_wallpapers = [
-        "https://images.unsplash.com/photo-1472457897821-70d3819a0e24?q=80&w=2000",
-        "https://images.unsplash.com/photo-1514306191717-452ec28c7814?q=80&w=2000",
-        "https://images.unsplash.com/photo-1537832816519-689ad163238b?q=80&w=2000",
-        "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?q=80&w=2000",
-        "https://images.unsplash.com/photo-1556905085-86a42173d520?q=80&w=2000",
-        "https://images.unsplash.com/photo-1512436991641-6745cdb1723f?q=80&w=2000",
-        "https://images.unsplash.com/photo-1551488831-00ddcb6c6bd3?q=80&w=2000",
-        "https://images.unsplash.com/photo-1441986300917-64674bd600d8?q=80&w=2000",
-        "https://images.unsplash.com/photo-1555529771-835f59fc5efe?q=80&w=2000",
-        "https://images.unsplash.com/photo-1506157786151-b8491531f063?q=80&w=2000"
+        "https://images.unsplash.com/photo-1472457897821-70d3819a0e24", "https://images.unsplash.com/photo-1514306191717-452ec28c7814",
+        "https://images.unsplash.com/photo-1537832816519-689ad163238b", "https://images.unsplash.com/photo-1490481651871-ab68de25d43d",
+        "https://images.unsplash.com/photo-1556905085-86a42173d520", "https://images.unsplash.com/photo-1512436991641-6745cdb1723f",
+        "https://images.unsplash.com/photo-1551488831-00ddcb6c6bd3", "https://images.unsplash.com/photo-1441986300917-64674bd600d8",
+        "https://images.unsplash.com/photo-1555529771-835f59fc5efe", "https://images.unsplash.com/photo-1506157786151-b8491531f063"
     ]
 
     with st.sidebar:
-        st.write("### 🎨 UI Theme")
-        mood = st.radio("Select Mood", ["Day Mood ☀️", "Night Mood 🌙"])
+        st.write(f"### {ln['lang_label']}")
+        st.session_state.lang = st.selectbox("", ["English", "Urdu"], index=0 if st.session_state.lang=="English" else 1)
+        
+        st.write(f"### {ln['theme_label']}")
+        mood = st.radio("", ["Day Mood ☀️", "Night Mood 🌙"])
+        
+        if st.button(ln['shuffle']):
+            st.session_state.bg_choice = random.choice(day_wallpapers if "Day" in mood else night_wallpapers)
     
-    # Save selection to session so it doesn't jump on every click
-    if 'bg_choice' not in st.session_state or st.sidebar.button("🔀 Shuffle Wallpaper"):
-        st.session_state.bg_choice = random.choice(day_wallpapers if "Day" in mood else night_wallpapers)
+    if 'bg_choice' not in st.session_state:
+        st.session_state.bg_choice = day_wallpapers[0]
     
     bg_img = st.session_state.bg_choice
-    overlay_color = "rgba(255, 255, 255, 0.85)" if "Day" in mood else "rgba(0, 0, 0, 0.80)"
-    text_color = "#111111" if "Day" in mood else "#FFFFFF"
+    overlay = "rgba(255, 255, 255, 0.88)" if "Day" in mood else "rgba(0, 0, 0, 0.82)"
+    txt = "#111111" if "Day" in mood else "#FFFFFF"
 
     st.markdown(f"""
         <style>
-        .stApp {{
-            background-image: url("{bg_img}");
-            background-size: cover;
-            background-attachment: fixed;
+        .stApp {{ background-image: url("{bg_img}?auto=format&fit=crop&w=2000&q=80"); background-size: cover; background-attachment: fixed; }}
+        .main-container {{ 
+            background-color: {overlay}; padding: 35px; border-radius: 20px; color: {txt}; 
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
         }}
-        .main-container {{
-            background-color: {overlay_color};
-            padding: 40px;
-            border-radius: 20px;
-            color: {text_color};
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-            margin-top: 20px;
-        }}
-        h1, h2, h3, p, label, .stMarkdown {{ color: {text_color} !important; }}
-        .stButton>button {{ width: 100%; border-radius: 10px; height: 3em; font-weight: bold; }}
+        h1, h2, h3, p, label, .stMarkdown {{ color: {txt} !important; {'text-align: right;' if st.session_state.lang=='Urdu' else ''} }}
+        .stButton>button {{ width: 100%; border-radius: 12px; font-weight: bold; height: 3.5em; }}
         </style>
     """, unsafe_allow_html=True)
 
-# --- 3. SESSION STATE ---
+# --- 4. MAIN APP ---
 if 'auth' not in st.session_state: st.session_state.auth = False
 if 'view' not in st.session_state: st.session_state.view = "login"
 
 apply_custom_style()
 
-# --- 4. APP LOGIC ---
 st.markdown('<div class="main-container">', unsafe_allow_html=True)
 
 if not st.session_state.auth:
-    # --- 🟢 LOGIN VIEW ---
+    # --- AUTHENTICATION VIEWS ---
     if st.session_state.view == "login":
-        st.title("🔑 Login - Tailor Master Pro")
-        le = st.text_input("Email / Username").strip().lower()
-        lp = st.text_input("Password", type="password").strip()
+        st.title(ln['title'])
+        le = st.text_input(ln['email']).strip().lower()
+        lp = st.text_input(ln['pass'], type="password").strip()
         
-        if st.button("Login Now"):
+        if st.button(ln['login_btn']):
             user = conn.execute("SELECT id, role, shop_name, status FROM users WHERE LOWER(email)=? AND password=?", (le, lp)).fetchone()
             if user:
-                if user[3] == 'Blocked': st.error("🚫 Account Blocked! Contact Sahil & Arman IT Solutions.")
+                if user[3] == 'Blocked': st.error("🚫 Account Blocked! Contact Admin.")
                 else:
                     st.session_state.auth = True
                     st.session_state.u_id, st.session_state.u_role, st.session_state.u_shop = user[0], user[1], user[2]
                     st.rerun()
-            else: st.error("❌ Invalid Details! Please try again.")
+            else: st.error("❌ Invalid Details!" if st.session_state.lang=="English" else "❌ غلط تفصیلات!")
         
         c1, c2 = st.columns(2)
         with c1: 
-            if st.button("📝 Register New Shop"): st.session_state.view = "register"; st.rerun()
+            if st.button(ln['reg_btn']): st.session_state.view = "register"; st.rerun()
         with c2: 
-            if st.button("❓ Forgot Password"): st.session_state.view = "forgot"; st.rerun()
+            if st.button(ln['forgot_btn']): st.session_state.view = "forgot"; st.rerun()
 
-    # --- 🟡 REGISTER VIEW ---
     elif st.session_state.view == "register":
-        st.title("📝 Shop Registration")
-        r_shop = st.text_input("Shop Name")
-        r_email = st.text_input("Email (Login ID)").strip().lower()
-        r_pass = st.text_input("Create Password", type="password")
-        r_sq = st.text_input("Security Question (e.g. Best Friend's Name?)")
-        r_sa = st.text_input("Security Answer")
-        
-        if st.button("Create Account & Login"):
-            if r_shop and r_email and r_pass and r_sa:
-                try:
-                    cur = conn.cursor()
-                    cur.execute("INSERT INTO users (email, password, shop_name, role, security_q, security_a, status) VALUES (?,?,?,?,?,?,?)", 
-                                 (r_email, r_pass, r_shop, 'admin', r_sq, r_sa, 'Active'))
-                    conn.commit()
-                    st.success("✅ Account Created Successfully!")
-                    st.session_state.auth = True
-                    st.session_state.u_id, st.session_state.u_role, st.session_state.u_shop = cur.lastrowid, 'admin', r_shop
-                    st.rerun()
-                except: st.error("⚠️ Email already exists!")
-            else: st.warning("⚠️ Please fill all fields.")
-        
-        if st.button("← Back to Login"): st.session_state.view = "login"; st.rerun()
+        st.title(ln['reg_btn'])
+        # Register inputs yahan aayenge...
+        if st.button("← Back" if st.session_state.lang=="English" else "← واپس"): 
+            st.session_state.view = "login"; st.rerun()
 
-    # --- 🔴 FORGOT PASSWORD VIEW ---
     elif st.session_state.view == "forgot":
-        st.title("🔐 Recover Password")
-        fe = st.text_input("Enter your registered Email").strip().lower()
-        if fe:
-            user_data = conn.execute("SELECT security_q, security_a, password FROM users WHERE LOWER(email)=?", (fe,)).fetchone()
-            if user_data:
-                st.info(f"Question: {user_data[0]}")
-                ans = st.text_input("Your Answer")
-                if st.button("Show My Password"):
-                    if ans.lower() == user_data[1].lower():
-                        st.success(f"🔓 Your Password is: **{user_data[2]}**")
-                    else: st.error("❌ Wrong Answer!")
-            else: st.error("📧 Email not found.")
-        
-        if st.button("← Back to Login"): st.session_state.view = "login"; st.rerun()
+        st.title(ln['forgot_btn'])
+        # Forgot password logic yahan aayegi...
+        if st.button("← Back" if st.session_state.lang=="English" else "← واپس"): 
+            st.session_state.view = "login"; st.rerun()
 
 else:
-    # --- 🔵 AUTHENTICATED STATE (Functions) ---
+    # --- LOGGED IN SIDEBAR MENU ---
     with st.sidebar:
-        st.title("👔 Tailor Master")
-        st.success(f"Shop: {st.session_state.u_shop}")
-        menu = st.selectbox("Navigation", ["Dashboard", "Customers", "Measurements", "Global Stats", "Settings"])
         st.markdown("---")
-        if st.button("🚪 Logout"):
+        st.success(f"Shop: {st.session_state.u_shop}")
+        menu = st.radio("MENU", [ln['dash'], ln['order'], ln['report'], ln['sec']])
+        
+        if st.button(ln['logout']):
             st.session_state.auth = False
             st.rerun()
 
-    if menu == "Global Stats":
-        st.header("📊 Global Platform Analytics")
-        df = pd.read_sql("SELECT shop_name, status, role FROM users", conn)
+    # --- PAGES ---
+    if menu == ln['dash']:
+        st.header(f"{ln['dash']} - {st.session_state.u_shop}")
+        st.info("📊 Welcome to your digital diary.")
+        # Analytics charts yahan add karein
         
-        c1, c2 = st.columns(2)
-        c1.metric("Total Active Shops", len(df[df['status']=='Active']))
-        c2.metric("Blocked Users", len(df[df['status']=='Blocked']))
+    elif menu == ln['order']:
+        st.header(ln['order'])
+        st.write("Measurement Form will be displayed here.")
         
-        fig = px.pie(df, names='status', title="Account Status Overview", hole=0.3)
-        st.plotly_chart(fig, use_container_width=True)
-        st.table(df)
+    elif menu == ln['report']:
+        st.header(ln['report'])
+        st.write("Detailed History of Orders.")
 
-    elif menu == "Dashboard":
-        st.header(f"Welcome to {st.session_state.u_shop}")
-        st.write("Today's Tasks & Overview will appear here.")
-        # Add quick metrics here
-        st.info("💡 Pro Tip: Use the 'Shuffle' button in the sidebar to change the background anytime!")
-
-    else:
-        st.header(f"🚧 {menu} Module")
-        st.write("Coming Soon: Full feature integration.")
+    elif menu == ln['sec']:
+        st.header(ln['sec'])
+        if st.session_state.u_role == 'super_admin':
+            st.subheader("Admin Control Panel")
+            df = pd.read_sql("SELECT shop_name, email, status FROM users", conn)
+            st.dataframe(df)
+        else:
+            st.write("Personal Security Settings.")
 
 st.markdown('</div>', unsafe_allow_html=True)

@@ -16,3 +16,26 @@ def get_connection():
     """)
     conn.commit()
     return conn
+import sqlite3
+
+def get_connection():
+    conn = sqlite3.connect("tailor_master.db", check_same_thread=False)
+    # 1. Orders Table Update
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS orders (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER,
+            client_name TEXT, client_phone TEXT, total_suits INTEGER,
+            total_bill REAL, paid_amount REAL, balance REAL,
+            acc_no TEXT, acc_name TEXT, payment_via TEXT,
+            order_date TEXT, status TEXT DEFAULT 'Pending'
+        )
+    """)
+    # 2. Daily Expenses Table
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS expenses (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER,
+            description TEXT, amount REAL, exp_date TEXT
+        )
+    """)
+    conn.commit()
+    return conn

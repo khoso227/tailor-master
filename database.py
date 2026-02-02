@@ -1,7 +1,7 @@
 import sqlite3
 
 def get_connection():
-    return sqlite3.connect('tailor_platform_v9.db', check_same_thread=False)
+    return sqlite3.connect('tailor_master_v10.db', check_same_thread=False)
 
 def init_db():
     conn = get_connection()
@@ -15,12 +15,12 @@ def init_db():
                   ('admin@sahilarman.com', 'sahilarman2026', 'Sahil & Arman IT Co', 'super_admin', 'Paid'))
     except: pass
 
-    # Clients Table with Verbal Notes & Custom Field
+    # Table with all new fields
     c.execute('''CREATE TABLE IF NOT EXISTS clients 
         (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, name TEXT, phone TEXT, 
-         suits_count INTEGER, total REAL, advance REAL, remaining REAL,
-         status TEXT, order_date DATE, delivery_date DATE, m_data TEXT, 
-         pay_method TEXT, verbal_notes TEXT, custom_field TEXT)''')
+         total REAL, advance REAL, remaining REAL, pay_method TEXT,
+         order_date DATE, delivery_date DATE, 
+         m_data TEXT, s_data TEXT, extra_req TEXT, verbal_notes TEXT)''')
     
     conn.commit()
     conn.close()

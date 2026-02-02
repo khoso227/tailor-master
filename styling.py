@@ -1,39 +1,40 @@
 import streamlit as st
 
 def apply_styling(theme='Dark'):
-    # Navy Blue Theme Colors
-    bg = "#1e293b" if theme == 'Dark' else "#f8fafc"
-    sidebar_bg = "#0f172a" if theme == 'Dark' else "#ffffff"
-    text = "#f1f5f9" if theme == 'Dark' else "#0f172a"
-    accent = "#38bdf8" # Bright Sky Blue
+    # Navy Professional Palette
+    bg = "#0f172a" if theme == 'Dark' else "#f8fafc"
+    card = "#1e293b" if theme == 'Dark' else "#ffffff"
+    text = "#f1f5f9" if theme == 'Dark' else "#1e293b"
+    accent = "#38bdf8"
     
     st.markdown(f"""
     <style>
-    /* Main Background */
     .stApp {{ background-color: {bg}; color: {text}; }}
+    [data-testid="stSidebar"] {{ background-color: #020617; border-right: 1px solid #334155; }}
     
-    /* Sidebar Text & Icons Visibility */
-    [data-testid="stSidebar"] {{ background-color: {sidebar_bg}; border-right: 1px solid #334155; }}
-    [data-testid="stSidebar"] * {{ color: {text} !important; font-weight: 600 !important; font-size: 15px; }}
+    /* Field Labels visibility */
+    label {{ color: {accent} !important; font-weight: bold !important; font-size: 14px !important; }}
     
-    /* Radio Button (Menu) Visibility */
-    div[data-testid="stSidebarNav"] li {{ background-color: transparent; }}
-    .st-emotion-cache-6qob1r {{ background-color: {accent} !important; color: black !important; }}
-
-    /* Cards/Metrics */
-    div[data-testid="stMetric"] {{
-        background-color: {sidebar_bg};
-        border: 2px solid {accent};
-        border-radius: 12px;
-        padding: 15px;
+    /* Inputs Styling */
+    .stTextInput>div>div>input, .stNumberInput>div>div>input {{
+        background-color: #0f172a !important;
+        color: white !important;
+        border: 1px solid #475569 !important;
+        border-radius: 8px !important;
     }}
     
-    h1, h2, h3 {{ color: {accent} !important; font-weight: 800; }}
+    /* Section Headers */
+    h3, h4 {{ color: white !important; border-bottom: 2px solid {accent}; padding-bottom: 5px; }}
     
-    /* Error Message Fix */
-    .stAlert {{ background-color: #1e293b; border: 1px solid {accent}; color: white; }}
+    /* Metric Boxes */
+    div[data-testid="stMetric"] {{
+        background-color: {card};
+        border-left: 5px solid {accent};
+        padding: 10px;
+        border-radius: 10px;
+    }}
     </style>
-    <div style="text-align:center; color:#64748b; font-size:10px; font-weight:bold; letter-spacing:2px;">
-        SAHIL & ARMAN IT SOLUTIONS
+    <div style="text-align:center; color:#475569; font-size:10px; font-weight:bold; letter-spacing:2px; padding:10px;">
+        SAHIL & ARMAN IT SOLUTIONS | VERSION 10.0
     </div>
     """, unsafe_allow_html=True)

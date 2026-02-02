@@ -4,79 +4,103 @@ from database import init_db, get_connection
 from styling import apply_styling
 from orders import add_order_ui
 
-# Initialize
+# Initialize System
 init_db()
 conn = get_connection()
 
-# --- Auth State ---
+# Auth States
 if 'logged_in' not in st.session_state: st.session_state.logged_in = False
 if 'user_role' not in st.session_state: st.session_state.user_role = None
 if 'user_id' not in st.session_state: st.session_state.user_id = None
+if 'shop_name' not in st.session_state: st.session_state.shop_name = ""
 
 apply_styling("Sahil & Arman Platform")
 
+# --- LOGIN SCREEN ---
 if not st.session_state.logged_in:
-    tab1, tab2 = st.tabs(["🔐 Login", "📝 Register New Shop"])
-    
-    with tab1:
-        st.subheader("Login to your Shop")
-        email = st.text_input("Email Address")
+    col1, col2, col3 = st.columns([1, 1.5, 1])
+    with col2:
+        st.markdown("<br><br>", unsafe_allow_html=True)
+        st.subheader("🔐 Professional Login")
+        email = st.text_input("Email Address (e.g. admin@sahilarman.com)")
         pwd = st.text_input("Password", type="password")
+        
         if st.button("Sign In"):
+            # Check for Super Admin or Shop Admin
             user = conn.execute("SELECT id, role, shop_name FROM users WHERE email=? AND password=?", (email, pwd)).fetchone()
             if user:
                 st.session_state.logged_in = True
                 st.session_state.user_id = user[0]
                 st.session_state.user_role = user[1]
                 st.session_state.shop_name = user[2]
+                st.success(f"Welcome {user[2]}")
                 st.rerun()
-            else: st.error("Invalid Email or Password")
-
-    with tab2:
-        st.subheader("Create New Account")
-        new_shop = st.text_input("Shop Name")
-        new_email = st.text_input("Your Email")
-        new_pwd = st.text_input("Choose Password", type="password")
-        if st.button("Register & Create Shop"):
-            try:
-                conn.execute("INSERT INTO users (email, password, shop_name, role) VALUES (?,?,?,?)", 
-                             (new_email, new_pwd, new_shop, 'admin'))
-                conn.commit()
-                st.success("Account Created! Please Login.")
-            except: st.error("Email already exists!")
-
-else:
-    # --- LOGGED IN AREA ---
-    st.sidebar.title(f"👔 {st.session_state.shop_name}")
-    st.sidebar.info(f"Role: {st.session_state.user_role.upper()}")
-
-    if st.session_state.user_role == "super_admin":
-        menu = st.sidebar.selectbox("🚀 SUPER ADMIN MENU", ["🌍 All Shops Analytics", "👥 Manage Users", "⚙️ System Logs"])
+            else:
+                st.error("Invalid Email or Password!")
         
-        if menu == "🌍 All Shops Analytics":
-            st.subheader("Global Platform Reports")
-            all_users = pd.read_sql("SELECT id, email, shop_name, role FROM users", conn)
-            st.write("### Registered Shops")
-            st.dataframe(all_users)
+        st.info("💡 Super Admin Login: admin@sahilarman.com / sahilarman2026")
+
+# --- LOGGED IN AREA ---
+else:
+    # Sidebar
+    st.sidebar.title(f"👔 {st.session_state.shop_name}")
+    st.sidebar.markdown(f"**Status:** {st.session_state.user_role.upper()}")
+    
+    # 👑 SUPER ADMIN MENU
+    if st.session_state.user_role == "super_admin":
+        menu = st.sidebar.selectbox("🚀 SUPER ADMIN PANEL", 
+            ["🌍 Global Dashboard", "➕ Register New Shop", "👥 All Registered Shops", "📊 Platform Analytics"])
+
+        if menu == "🌍 Global Dashboard":
+            st.subheader("🌎 All Shops Global Data")
+            # Super Admin sees ALL clients from ALL shops
+            all_clients = pd.read_sql("""
+                SELECT clients.id, users.shop_name as Shop, clients.name as Customer, clients.phone, clients.total, clients.remaining, clients.status 
+                FROM clients 
+                JOIN users ON clients.user_id = users.id
+            """, conn)
+            st.dataframe(all_clients, use_container_width=True)
             
-            total_rev = pd.read_sql("SELECT SUM(total) FROM clients", conn).iloc[0,0]
-            st.metric("Total Platform Revenue", f"Rs.{total_rev or 0}")
+            # Global Stats
+            c1, c2 = st.columns(2)
+            total_rev = all_clients['total'].sum()
+            total_shops = conn.execute("SELECT COUNT(*) FROM users WHERE role='admin'").fetchone()[0]
+            c1.metric("Total Platform Revenue", f"Rs.{total_rev:,.0f}")
+            c2.metric("Total Active Shops", total_shops)
 
+        elif menu == "➕ Register New Shop":
+            st.subheader("📝 Create New Shop Account")
+            with st.form("reg_form"):
+                s_name = st.text_input("Shop Name")
+                s_email = st.text_input("Login Email")
+                s_pass = st.text_input("Assign Password")
+                if st.form_submit_button("Register Shop Now"):
+                    try:
+                        conn.execute("INSERT INTO users (email, password, shop_name, role) VALUES (?,?,?,?)", 
+                                     (s_email, s_pass, s_name, 'admin'))
+                        conn.commit()
+                        st.success(f"Success! {s_name} has been registered.")
+                    except:
+                        st.error("Error: This Email is already registered!")
+
+    # 👔 SHOP ADMIN MENU
     else:
-        # Normal Shop Admin Menu
-        menu = st.sidebar.selectbox("Shop Menu", ["🏠 Dashboard", "📏 New Order", "📊 Analytics", "👥 Staff"])
+        menu = st.sidebar.selectbox("Shop Menu", ["🏠 My Dashboard", "📏 New Order", "📊 My Analytics", "👥 My Staff"])
 
-        if menu == "🏠 Dashboard":
+        if menu == "🏠 My Dashboard":
             st.subheader(f"Dashboard - {st.session_state.shop_name}")
-            # Filter data by user_id
-            df = pd.read_sql(f"SELECT * FROM clients WHERE user_id={st.session_state.user_id}", conn)
-            st.dataframe(df)
+            # Individual Shop Admin sees ONLY their own clients
+            my_clients = pd.read_sql(f"SELECT id, name, phone, total, remaining, status, delivery_date FROM clients WHERE user_id={st.session_state.user_id}", conn)
+            st.dataframe(my_clients, use_container_width=True)
 
         elif menu == "📏 New Order":
-            # Pass user_id to add_order function
-            st.info("Adding order for your shop...")
-            add_order_ui(['Length', 'Shoulder', 'Chest', 'Waist'], st.session_state.user_id)
+            # Get measurement labels from settings (simplified for now)
+            labels = ["Length", "Sleeves", "Shoulder", "Collar", "Chest", "Waist", "Hip", "Bottom"]
+            add_order_ui(labels, st.session_state.user_id)
 
-    if st.sidebar.button("Logout"):
+    # Global Logout
+    st.sidebar.markdown("---")
+    if st.sidebar.button("🔌 Secure Logout"):
         st.session_state.logged_in = False
+        st.session_state.user_role = None
         st.rerun()

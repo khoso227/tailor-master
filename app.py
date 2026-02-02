@@ -3,10 +3,8 @@ import pandas as pd
 import urllib.parse
 from database import init_db, get_connection
 from styling import apply_styling
-from translations import get_text
-from orders import add_order_ui
+from translations import get_text  # Yeh line 6 hai
 import analytics
-
 if 'auth' not in st.session_state: st.session_state.auth = False
 
 init_db()
@@ -86,3 +84,4 @@ else:
 
     if st.sidebar.button("Logout"):
         st.session_state.auth = False; st.rerun()
+

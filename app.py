@@ -1,102 +1,82 @@
 import streamlit as st
 import pandas as pd
-import plotly.express as px
-from datetime import date
-
-# Import directly from the files you uploaded (No modules folder)
 from database import init_db, get_connection
 from styling import apply_styling
 from orders import add_order_ui
 
-# Initialize Database
+# Initialize
 init_db()
 conn = get_connection()
 
-# Load Shop Settings
-settings = conn.execute("SELECT * FROM settings WHERE id=1").fetchone()
-shop_name = settings[1]
-admin_pass = settings[2]
-m_labels = settings[3].split(',')
+# --- Auth State ---
+if 'logged_in' not in st.session_state: st.session_state.logged_in = False
+if 'user_role' not in st.session_state: st.session_state.user_role = None
+if 'user_id' not in st.session_state: st.session_state.user_id = None
 
-# Apply Sahil & Arman IT Branding
-apply_styling(shop_name)
+apply_styling("Sahil & Arman Platform")
 
-# --- Authentication ---
-if 'auth' not in st.session_state:
-    st.session_state.auth = False
-
-if not st.session_state.auth:
-    col1, col2, col3 = st.columns([1, 1.5, 1])
-    with col2:
-        st.markdown("<br><br>", unsafe_allow_html=True)
-        st.subheader("🔐 Enterprise Login")
-        pwd = st.text_input("Enter Password", type="password")
+if not st.session_state.logged_in:
+    tab1, tab2 = st.tabs(["🔐 Login", "📝 Register New Shop"])
+    
+    with tab1:
+        st.subheader("Login to your Shop")
+        email = st.text_input("Email Address")
+        pwd = st.text_input("Password", type="password")
         if st.button("Sign In"):
-            if pwd == admin_pass:
-                st.session_state.auth = True
+            user = conn.execute("SELECT id, role, shop_name FROM users WHERE email=? AND password=?", (email, pwd)).fetchone()
+            if user:
+                st.session_state.logged_in = True
+                st.session_state.user_id = user[0]
+                st.session_state.user_role = user[1]
+                st.session_state.shop_name = user[2]
                 st.rerun()
-            else:
-                st.error("Invalid Password!")
-        
-        with st.expander("Forgot Password?"):
-            st.info("Master Key: MASTER2026")
-            m_key = st.text_input("Master Key", type="password")
-            if st.button("Recover"):
-                if m_key == "MASTER2026": st.warning(f"Pass: {admin_pass}")
+            else: st.error("Invalid Email or Password")
+
+    with tab2:
+        st.subheader("Create New Account")
+        new_shop = st.text_input("Shop Name")
+        new_email = st.text_input("Your Email")
+        new_pwd = st.text_input("Choose Password", type="password")
+        if st.button("Register & Create Shop"):
+            try:
+                conn.execute("INSERT INTO users (email, password, shop_name, role) VALUES (?,?,?,?)", 
+                             (new_email, new_pwd, new_shop, 'admin'))
+                conn.commit()
+                st.success("Account Created! Please Login.")
+            except: st.error("Email already exists!")
 
 else:
-    # --- Sidebar ---
-    st.sidebar.markdown(f"### 👔 {shop_name}")
-    menu = st.sidebar.selectbox("🚀 ERP MENU", 
-        ["🏠 Dashboard", "📏 New Order", "📊 Analytics", "👥 Staff", "⚙️ Settings"])
-    
+    # --- LOGGED IN AREA ---
+    st.sidebar.title(f"👔 {st.session_state.shop_name}")
+    st.sidebar.info(f"Role: {st.session_state.user_role.upper()}")
+
+    if st.session_state.user_role == "super_admin":
+        menu = st.sidebar.selectbox("🚀 SUPER ADMIN MENU", ["🌍 All Shops Analytics", "👥 Manage Users", "⚙️ System Logs"])
+        
+        if menu == "🌍 All Shops Analytics":
+            st.subheader("Global Platform Reports")
+            all_users = pd.read_sql("SELECT id, email, shop_name, role FROM users", conn)
+            st.write("### Registered Shops")
+            st.dataframe(all_users)
+            
+            total_rev = pd.read_sql("SELECT SUM(total) FROM clients", conn).iloc[0,0]
+            st.metric("Total Platform Revenue", f"Rs.{total_rev or 0}")
+
+    else:
+        # Normal Shop Admin Menu
+        menu = st.sidebar.selectbox("Shop Menu", ["🏠 Dashboard", "📏 New Order", "📊 Analytics", "👥 Staff"])
+
+        if menu == "🏠 Dashboard":
+            st.subheader(f"Dashboard - {st.session_state.shop_name}")
+            # Filter data by user_id
+            df = pd.read_sql(f"SELECT * FROM clients WHERE user_id={st.session_state.user_id}", conn)
+            st.dataframe(df)
+
+        elif menu == "📏 New Order":
+            # Pass user_id to add_order function
+            st.info("Adding order for your shop...")
+            add_order_ui(['Length', 'Shoulder', 'Chest', 'Waist'], st.session_state.user_id)
+
     if st.sidebar.button("Logout"):
-        st.session_state.auth = False
+        st.session_state.logged_in = False
         st.rerun()
-
-    # --- 🏠 Dashboard ---
-    if menu == "🏠 Dashboard":
-        st.subheader("📈 Business Metrics")
-        stats = pd.read_sql("SELECT SUM(total), SUM(advance), SUM(remaining) FROM clients", conn).iloc[0]
-        c1, c2, c3 = st.columns(3)
-        c1.metric("Total Sales", f"Rs.{stats[0] or 0}")
-        c2.metric("Received", f"Rs.{stats[1] or 0}")
-        c3.metric("Outstanding", f"Rs.{stats[2] or 0}")
-
-        st.markdown("---")
-        st.subheader("🔍 Search Customer")
-        search = st.text_input("Name / Phone")
-        query = "SELECT id, name, phone, status, delivery_date FROM clients"
-        if search: query += f" WHERE name LIKE '%{search}%' OR phone LIKE '%{search}%'"
-        st.dataframe(pd.read_sql(query, conn), use_container_width=True)
-
-    # --- 📏 New Order ---
-    elif menu == "📏 New Order":
-        add_order_ui(m_labels)
-
-    # --- 📊 Analytics ---
-    elif menu == "📊 Analytics":
-        import analytics
-        analytics.show_reports()
-
-    # --- 👥 Staff ---
-    elif menu == "👥 Staff":
-        st.subheader("👥 Staff Management")
-        with st.form("staff_add"):
-            s_name = st.text_input("Name"); s_role = st.text_input("Role")
-            if st.form_submit_button("Add Staff"):
-                conn.execute("INSERT INTO staff (name, role) VALUES (?,?)", (s_name, s_role))
-                conn.commit()
-                st.success("Staff Added!")
-        st.table(pd.read_sql("SELECT * FROM staff", conn))
-
-    # --- ⚙️ Settings ---
-    elif menu == "⚙️ Settings":
-        st.subheader("⚙️ System Settings")
-        new_shop = st.text_input("Shop Name", shop_name)
-        new_labels = st.text_area("Measurement Labels", ",".join(m_labels))
-        if st.button("Save Settings"):
-            conn.execute("UPDATE settings SET shop_name=?, m_labels=? WHERE id=1", (new_shop, new_labels))
-            conn.commit()
-            st.success("Settings Saved! Restarting...")
-            st.rerun()

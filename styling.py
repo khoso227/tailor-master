@@ -1,39 +1,39 @@
 import streamlit as st
 
 def apply_styling(theme='Dark'):
-    # Colors optimized for visibility
-    bg = "#0e1117" if theme == 'Dark' else "#f0f2f6"
-    card = "#1a1c24" if theme == 'Dark' else "#ffffff"
-    text = "#ffffff" if theme == 'Dark' else "#000000"
-    border = "#30363d" if theme == 'Dark' else "#d1d5db"
-
+    # Professional Navy & Slate Colors
+    bg = "#1e293b" if theme == 'Dark' else "#f8fafc"
+    sidebar = "#0f172a" if theme == 'Dark' else "#ffffff"
+    card = "#334155" if theme == 'Dark' else "#ffffff"
+    text = "#f1f5f9" if theme == 'Dark' else "#0f172a"
+    accent = "#38bdf8" # Sky Blue accent
+    
     st.markdown(f"""
     <style>
-    /* Global Styles */
     .stApp {{ background-color: {bg}; color: {text}; }}
-    [data-testid="stSidebar"] {{ background-color: {card}; border-right: 2px solid {border}; }}
+    [data-testid="stSidebar"] {{ background-color: {sidebar}; border-right: 1px solid #475569; }}
     
-    /* chamakdar headers */
-    h1, h2, h3 {{ color: #38bdf8 !important; font-weight: 800 !important; }}
-    label {{ color: {text} !important; font-size: 16px !important; font-weight: 600 !important; }}
-    
-    /* Metrics Box */
-    [data-testid="stMetric"] {{
+    /* Metrics Box - Navy Theme */
+    div[data-testid="stMetric"] {{
         background-color: {card};
-        border: 2px solid #38bdf8;
-        border-radius: 15px;
-        padding: 20px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        border: 2px solid {accent};
+        border-radius: 12px;
+        padding: 15px;
     }}
-    [data-testid="stMetricValue"] {{ color: #22c55e !important; font-size: 28px !important; }}
     
-    /* Dataframe Header Visibility */
-    .stDataFrame thead tr th {{ background-color: #38bdf8 !important; color: black !important; }}
+    /* Input Fields Visibility */
+    .stTextInput>div>div>input, .stNumberInput>div>div>input {{
+        background-color: {sidebar} !important;
+        color: white !important;
+        border: 1px solid {accent} !important;
+    }}
+
+    h1, h2, h3 {{ color: {accent} !important; font-weight: 800; }}
     
-    .company-tag {{
-        text-align: center; color: #94a3b8; font-size: 12px; font-weight: bold;
-        letter-spacing: 3px; margin-bottom: 20px; border-bottom: 1px solid #334155;
+    .company-header {{
+        text-align: center; color: #94a3b8; font-size: 11px;
+        font-weight: bold; letter-spacing: 2px; margin-bottom: 20px;
     }}
     </style>
-    <div class="company-tag">SAHIL & ARMAN IT SOLUTIONS</div>
+    <div class="company-header">SAHIL & ARMAN IT SOLUTIONS</div>
     """, unsafe_allow_html=True)

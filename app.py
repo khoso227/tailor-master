@@ -34,7 +34,7 @@ def get_connection():
 
 conn = get_connection()
 
-# --- 2. BILINGUAL SUPPORT (Urdu + English) ---
+# --- 2. BILINGUAL SUPPORT ---
 if 'lang' not in st.session_state: st.session_state.lang = "English"
 
 translations = {
@@ -45,14 +45,16 @@ translations = {
         "login_btn": "Login Now",
         "reg_btn": "Register New Shop",
         "forgot_btn": "Forgot Password?",
-        "dash": "Dashboard",
-        "order": "New Order",
-        "report": "Reports",
-        "sec": "Security / Settings",
-        "lang_label": "Language 🌐",
-        "theme_label": "Theme Mood 🎨",
-        "logout": "Logout 🚪",
-        "shuffle": "🔀 Shuffle Wallpaper"
+        "shop_label": "Shop Name",
+        "phone_label": "Phone Number",
+        "sq_label": "Security Question (e.g. Best Friend's Name?)",
+        "sa_label": "Security Answer",
+        "create_btn": "Create Account & Login",
+        "back_btn": "← Back to Login",
+        "recovery_email": "Enter Recovery Email",
+        "recover_btn": "Show Password",
+        "dash": "Dashboard", "order": "New Order", "report": "Reports", "sec": "Security / Settings",
+        "lang_label": "Language 🌐", "theme_label": "Theme Mood 🎨", "logout": "Logout 🚪", "shuffle": "🔀 Shuffle Wallpaper"
     },
     "Urdu": {
         "title": "لاگ ان - ٹیلر ماسٹر پرو 🔑",
@@ -61,14 +63,16 @@ translations = {
         "login_btn": "لاگ ان کریں",
         "reg_btn": "نئی دکان رجسٹر کریں",
         "forgot_btn": "پاس ورڈ بھول گئے؟",
-        "dash": "ڈیش بورڈ",
-        "order": "نیا آرڈر",
-        "report": "رپورٹس",
-        "sec": "سیکورٹی / سیٹنگز",
-        "lang_label": "زبان 🌐",
-        "theme_label": "تھیم موڈ 🎨",
-        "logout": "لاگ آؤٹ 🚪",
-        "shuffle": "وال پیپر تبدیل کریں 🔀"
+        "shop_label": "دکان کا نام",
+        "phone_label": "فون نمبر",
+        "sq_label": "سیکورٹی سوال (مثلاً بہترین دوست؟)",
+        "sa_label": "سیکورٹی جواب",
+        "create_btn": "اکاؤنٹ بنائیں اور لاگ ان کریں",
+        "back_btn": "لاگ ان پر واپس جائیں ←",
+        "recovery_email": "ریکوری ای میل درج کریں",
+        "recover_btn": "پاس ورڈ دیکھیں",
+        "dash": "ڈیش بورڈ", "order": "نیا آرڈر", "report": "رپورٹس", "sec": "سیکورٹی / سیٹنگز",
+        "lang_label": "زبان 🌐", "theme_label": "تھیم موڈ 🎨", "logout": "لاگ آؤٹ 🚪", "shuffle": "وال پیپر تبدیل کریں 🔀"
     }
 }
 
@@ -120,7 +124,7 @@ def apply_custom_style():
         </style>
     """, unsafe_allow_html=True)
 
-# --- 4. MAIN APP ---
+# --- 4. APP LOGIC ---
 if 'auth' not in st.session_state: st.session_state.auth = False
 if 'view' not in st.session_state: st.session_state.view = "login"
 
@@ -129,7 +133,7 @@ apply_custom_style()
 st.markdown('<div class="main-container">', unsafe_allow_html=True)
 
 if not st.session_state.auth:
-    # --- AUTHENTICATION VIEWS ---
+    # --- 🟢 LOGIN VIEW ---
     if st.session_state.view == "login":
         st.title(ln['title'])
         le = st.text_input(ln['email']).strip().lower()
@@ -151,20 +155,51 @@ if not st.session_state.auth:
         with c2: 
             if st.button(ln['forgot_btn']): st.session_state.view = "forgot"; st.rerun()
 
+    # --- 🟡 REGISTER VIEW (Form Restored) ---
     elif st.session_state.view == "register":
         st.title(ln['reg_btn'])
-        # Register inputs yahan aayenge...
-        if st.button("← Back" if st.session_state.lang=="English" else "← واپس"): 
-            st.session_state.view = "login"; st.rerun()
+        r_sn = st.text_input(ln['shop_label'])
+        r_ph = st.text_input(ln['phone_label'])
+        r_e = st.text_input(ln['email']).strip().lower()
+        r_p = st.text_input(ln['pass'], type="password")
+        r_sq = st.text_input(ln['sq_label'])
+        r_sa = st.text_input(ln['sa_label'])
+        
+        if st.button(ln['create_btn']):
+            if r_sn and r_e and r_p and r_sa:
+                try:
+                    cur = conn.cursor()
+                    cur.execute("INSERT INTO users (email, password, shop_name, role, phone, security_q, security_a) VALUES (?,?,?,?,?,?,?)", 
+                                 (r_e, r_p, r_sn, 'admin', r_ph, r_sq, r_sa))
+                    conn.commit()
+                    st.success("✅ Account Created!")
+                    st.session_state.auth = True
+                    st.session_state.u_id, st.session_state.u_role, st.session_state.u_shop = cur.lastrowid, 'admin', r_sn
+                    st.rerun()
+                except: st.error("⚠️ Email already exists!")
+            else: st.warning("⚠️ Please fill essential fields.")
+        
+        if st.button(ln['back_btn']): st.session_state.view = "login"; st.rerun()
 
+    # --- 🔴 FORGOT PASSWORD VIEW (Logic Restored) ---
     elif st.session_state.view == "forgot":
         st.title(ln['forgot_btn'])
-        # Forgot password logic yahan aayegi...
-        if st.button("← Back" if st.session_state.lang=="English" else "← واپس"): 
-            st.session_state.view = "login"; st.rerun()
+        fe = st.text_input(ln['recovery_email']).strip().lower()
+        if fe:
+            u_data = conn.execute("SELECT security_q, security_a, password FROM users WHERE LOWER(email)=?", (fe,)).fetchone()
+            if u_data:
+                st.info(f"Question: {u_data[0]}")
+                ans = st.text_input(ln['sa_label'])
+                if st.button(ln['recover_btn']):
+                    if ans.lower() == u_data[1].lower():
+                        st.success(f"🔓 Your Password: **{u_data[2]}**")
+                    else: st.error("❌ Wrong Answer!")
+            else: st.error("📧 Email not found.")
+        
+        if st.button(ln['back_btn']): st.session_state.view = "login"; st.rerun()
 
 else:
-    # --- LOGGED IN SIDEBAR MENU ---
+    # --- 🔵 AUTHENTICATED STATE (Navigation Restored) ---
     with st.sidebar:
         st.markdown("---")
         st.success(f"Shop: {st.session_state.u_shop}")
@@ -177,16 +212,15 @@ else:
     # --- PAGES ---
     if menu == ln['dash']:
         st.header(f"{ln['dash']} - {st.session_state.u_shop}")
-        st.info("📊 Welcome to your digital diary.")
-        # Analytics charts yahan add karein
+        st.info("📊 Welcome to your digital summary.")
         
     elif menu == ln['order']:
         st.header(ln['order'])
-        st.write("Measurement Form will be displayed here.")
+        st.write("Order entry form goes here.")
         
     elif menu == ln['report']:
         st.header(ln['report'])
-        st.write("Detailed History of Orders.")
+        st.write("View sales and order history.")
 
     elif menu == ln['sec']:
         st.header(ln['sec'])
@@ -195,6 +229,6 @@ else:
             df = pd.read_sql("SELECT shop_name, email, status FROM users", conn)
             st.dataframe(df)
         else:
-            st.write("Personal Security Settings.")
+            st.write("Security settings and password change.")
 
 st.markdown('</div>', unsafe_allow_html=True)

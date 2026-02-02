@@ -3,72 +3,128 @@ import pandas as pd
 import plotly.express as px
 from database import get_connection
 
-def show_global_stats():
-    """Super Admin View: Poore system ki malumat aur shopkeepers ki details"""
+# =====================================================
+# SUPER ADMIN : GLOBAL SYSTEM ANALYTICS
+# =====================================================
+def show_global_stats(conn=None):
+    """
+    Super Admin View:
+    - Total Shops
+    - Paid / Pending Shops
+    - Total Platform Business
+    - Shop Contact & Expiry Details
+    """
+
     st.header("🌍 Global System Overview")
-    conn = get_connection()
-    
-    # --- 1. Summary Metrics ---
-    # Gin-na ke total kitni dukanen hain
-    total_shops = pd.read_sql("SELECT COUNT(*) as c FROM users WHERE role='admin'", conn).iloc[0,0]
-    # Poore platform par kitne ka business hua
-    total_rev = pd.read_sql("SELECT SUM(total) as t FROM clients", conn).iloc[0,0] or 0
-    
-    c1, c2 = st.columns(2)
-    c1.metric("Registered Partner Shops", total_shops)
-    c2.metric("Total Platform Business", f"Rs.{total_rev:,.0f}")
+
+    # Connection auto-handle
+    if conn is None:
+        conn = get_connection()
+
+    # -------- Summary Metrics --------
+    stats = pd.read_sql("""
+        SELECT
+            COUNT(*) total_shops,
+            SUM(CASE WHEN fee_status='paid' THEN 1 ELSE 0 END) paid_shops,
+            SUM(CASE WHEN fee_status!='paid' THEN 1 ELSE 0 END) pending_shops
+        FROM users
+        WHERE role='admin'
+    """, conn)
+
+    total_rev = pd.read_sql(
+        "SELECT SUM(total) t FROM clients",
+        conn
+    ).iloc[0, 0] or 0
+
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("🏪 Partner Shops", stats['total_shops'][0])
+    c2.metric("✅ Paid Shops", stats['paid_shops'][0])
+    c3.metric("⚠ Pending Shops", stats['pending_shops'][0])
+    c4.metric("💰 Platform Business", f"Rs.{total_rev:,.0f}")
 
     st.markdown("---")
-    
-    # --- 2. Active Shops Table with Contact & Expiry ---
-    st.subheader("👥 Active Shops & Contact Details")
-    # Yeh query shopkeeper ka Mobile, Email, Expiry Date aur Status sab dikhayegi
-    query = """
-        SELECT id, shop_name, phone, email, fee_status, expiry_date, status 
-        FROM users 
-        WHERE role='admin'
-    """
-    shops_df = pd.read_sql(query, conn)
-    
-    if not shops_df.empty:
-        # Dataframe use karne se admin asani se search aur filter kar sakta hai
-        st.dataframe(shops_df, use_container_width=True)
-    else:
-        st.info("Abhi tak koi dukan register nahi hui.")
 
-def show_shop_reports(user_id):
-    """Shopkeeper View: Dukan-dar ke liye karobar ke analytics aur charts"""
+    # -------- Shops Detail Table --------
+    st.subheader("👥 Shops & Contact Details")
+
+    shops_df = pd.read_sql("""
+        SELECT 
+            id,
+            shop_name,
+            phone,
+            email,
+            fee_status,
+            expiry_date,
+            status
+        FROM users
+        WHERE role='admin'
+        ORDER BY shop_name
+    """, conn)
+
+    if shops_df.empty:
+        st.info("Abhi tak koi shop register nahi hui.")
+    else:
+        st.dataframe(shops_df, use_container_width=True)
+
+
+# =====================================================
+# SHOPKEEPER : BUSINESS REPORTS & CHARTS
+# =====================================================
+def show_shop_reports(conn, user_id):
+    """
+    Shopkeeper View:
+    - Sales Progress Chart
+    - Payment Method Chart
+    - Recent Transactions Table
+    """
+
     st.header("📊 Business Analytics & Reports")
-    conn = get_connection()
-    
-    # Data nikalna charts banane ke liye
-    df = pd.read_sql(f"SELECT order_date, total, remaining, pay_method FROM clients WHERE user_id={user_id}", conn)
-    
+
+    df = pd.read_sql("""
+        SELECT
+            order_date,
+            total,
+            advance,
+            remaining,
+            pay_method,
+            status
+        FROM clients
+        WHERE user_id=?
+        ORDER BY order_date
+    """, conn, params=(user_id,))
+
     if df.empty:
-        st.info("📊 Reports banane ke liye pehle kuch orders add karein.")
+        st.info("📊 Reports ke liye pehle orders add karein.")
         return
 
-    # --- 1. Visual Charts ---
+    # -------- Charts --------
     col1, col2 = st.columns(2)
-    
+
     with col1:
-        st.write("📈 **Sales Progress (Karobar ki Raftar)**")
-        # Area chart se pata chalta hai ke kis din kitni sale hui
-        fig = px.area(df, x='order_date', y='total', 
-                     color_discrete_sequence=['#38bdf8'],
-                     labels={'order_date': 'Date', 'total': 'Amount'})
-        fig.update_layout(margin=dict(l=20, r=20, t=20, b=20))
-        st.plotly_chart(fig, use_container_width=True)
-    
+        st.write("📈 Sales Progress")
+        fig1 = px.area(
+            df,
+            x="order_date",
+            y="total",
+            labels={"order_date": "Date", "total": "Amount"}
+        )
+        fig1.update_layout(margin=dict(l=20, r=20, t=30, b=20))
+        st.plotly_chart(fig1, use_container_width=True)
+
     with col2:
-        st.write("💳 **Payment Methods (Adaigi ka Tariqa)**")
-        # Pie chart se pata chalta hai ke Cash zyada aa raha hai ya Online
-        fig2 = px.pie(df, names='pay_method', hole=0.4,
-                      color_discrete_sequence=px.colors.sequential.RdBu)
-        fig2.update_layout(margin=dict(l=20, r=20, t=20, b=20))
+        st.write("💳 Payment Methods")
+        fig2 = px.pie(
+            df,
+            names="pay_method",
+            hole=0.4
+        )
+        fig2.update_layout(margin=dict(l=20, r=20, t=30, b=20))
         st.plotly_chart(fig2, use_container_width=True)
 
-    # --- 2. Detailed Summary Table ---
+    # -------- Recent Transactions --------
     st.markdown("---")
-    st.subheader("📝 Recent Transactions Summary")
-    st.dataframe(df.tail(10), use_container_width=True)
+    st.subheader("🧾 Recent Transactions")
+    st.dataframe(
+        df.tail(10),
+        use_container_width=True
+    )

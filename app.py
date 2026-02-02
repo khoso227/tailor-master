@@ -1,180 +1,172 @@
 import streamlit as st
 import pandas as pd
+import plotly.express as px
 import sqlite3
 import random
-import datetime
-import urllib.parse
-from services import analytics
 
-# ---------------- CONFIG ----------------
-st.set_page_config(
-    page_title="Tailor Master Pro",
-    page_icon="🧵",
-    layout="wide"
-)
+# --- 1. DATABASE CONNECTION ---
+def get_connection():
+    return sqlite3.connect("tailor_master.db", check_same_thread=False)
 
-conn = sqlite3.connect("tailor_master.db", check_same_thread=False)
+conn = get_connection()
 
-# ---------------- WALLPAPER SYSTEM ----------------
+# --- 2. MULTI-LANGUAGE (t dictionary) ---
+# Maine basics add kiye hain, aap apne purane dict se replace kar sakte hain
+t = {
+    'login': 'Login', 'email': 'Email', 'pass': 'Password', 'register': 'Register',
+    'shop': 'Shop Name', 'phone': 'Phone Number', 's_q': 'Security Question',
+    's_a': 'Security Answer', 'forgot': 'Forgot Password?'
+}
+
+# --- 3. WALLPAPER LOGIC (20 Mood Wallpapers) ---
 def set_wallpaper():
-    hour = datetime.datetime.now().hour
+    day_wallpapers = [
+        "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?q=80&w=2000", # Fashion Shop
+        "https://images.unsplash.com/photo-1520004434532-668416a08753?q=80&w=2000", # Fabric
+        "https://images.unsplash.com/photo-1544441893-675973e31985?q=80&w=2000", # Tailor Room
+        "https://images.unsplash.com/photo-1594932224828-b4b059b6f684?q=80&w=2000", # White Shirt
+        "https://images.unsplash.com/photo-1612423284934-2850a4ea6b0f?q=80&w=2000", # Sewing
+        "https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?q=80&w=2000", # Sunlight Fashion
+        "https://images.unsplash.com/photo-1534126511673-b68991578f6a?q=80&w=2000", # Modern Studio
+        "https://images.unsplash.com/photo-1516762689617-e1cffcef479d?q=80&w=2000", # Clothes Rack
+        "https://images.unsplash.com/photo-1542060717-d79d9e463a8a?q=80&w=2000", # Measuring Tape
+        "https://images.unsplash.com/photo-1567401893414-76b7b1e5a7a5?q=80&w=2000"  # Boutique
+    ]
+    
+    night_wallpapers = [
+        "https://images.unsplash.com/photo-1472457897821-70d3819a0e24?q=80&w=2000", # Neon Tailor
+        "https://images.unsplash.com/photo-1514306191717-452ec28c7814?q=80&w=2000", # Dark Studio
+        "https://images.unsplash.com/photo-1537832816519-689ad163238b?q=80&w=2000", # Night Fashion
+        "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?q=80&w=2000", # Elegant Dark
+        "https://images.unsplash.com/photo-1556905085-86a42173d520?q=80&w=2000", # Cozy sewing
+        "https://images.unsplash.com/photo-1512436991641-6745cdb1723f?q=80&w=2000", # Dark Boutique
+        "https://images.unsplash.com/photo-1551488831-00ddcb6c6bd3?q=80&w=2000", # Abstract Fabric
+        "https://images.unsplash.com/photo-1441986300917-64674bd600d8?q=80&w=2000", # Night Shop
+        "https://images.unsplash.com/photo-1555529771-835f59fc5efe?q=80&w=2000", # Moody Lighting
+        "https://images.unsplash.com/photo-1506157786151-b8491531f063?q=80&w=2000"  # Dark Aesthetic
+    ]
 
-    if 6 <= hour < 18:
-        wp = f"assets/wallpapers/day{random.randint(1,10)}.jpg"
+    st.sidebar.markdown("### 🎨 UI Theme")
+    mood = st.sidebar.radio("Select Mood", ["Day Mood ☀️", "Night Mood 🌙"])
+    
+    if mood == "Day Mood ☀️":
+        bg_img = random.choice(day_wallpapers)
+        text_color = "black"
     else:
-        wp = f"assets/wallpapers/night{random.randint(1,10)}.jpg"
+        bg_img = random.choice(night_wallpapers)
+        text_color = "white"
 
-    st.markdown(
-        f"""
-        <style>
-        .stApp {{
-            background: url("{wp}");
-            background-size: cover;
-            background-attachment: fixed;
-        }}
-        </style>
-        """,
-        unsafe_allow_html=True
-    )
+    page_bg_img = f'''
+    <style>
+    .stApp {{
+        background-image: url("{bg_img}");
+        background-size: cover;
+        background-repeat: no-repeat;
+        color: {text_color};
+    }}
+    </style>
+    '''
+    st.markdown(page_bg_img, unsafe_allow_html=True)
 
+# --- 4. ANALYTICS VIEW (Merged from analytics.py) ---
+def show_global_stats(conn=None):
+    st.header("📊 Global System Overview")
+    if conn is None:
+        conn = get_connection()
+    
+    # Example Query - Update based on your actual DB schema
+    try:
+        stats = pd.read_sql("SELECT shop_name, status, role FROM users", conn)
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Total Shops", len(stats))
+        c2.metric("Active Admins", len(stats[stats['role'] == 'admin']))
+        c3.metric("Blocked Accounts", len(stats[stats['status'] == 'Blocked']))
+        
+        fig = px.pie(stats, names='status', title="Account Status Distribution")
+        st.plotly_chart(fig, use_container_width=True)
+    except:
+        st.info("No analytics data available yet.")
+
+# --- 5. MAIN APP LOGIC ---
+if 'view' not in st.session_state: st.session_state.view = "login"
+if 'auth' not in st.session_state: st.session_state.auth = False
+
+# Apply Theme
 set_wallpaper()
 
-# ---------------- AUTH GUARD ----------------
-if not st.session_state.get("auth"):
-    st.warning("Please login first")
-    st.stop()
+if not st.session_state.auth:
+    # 🟢 LOGIN VIEW
+    if st.session_state.view == "login":
+        st.subheader(t['login'])
+        le = st.text_input(t['email'], key="l_e").strip().lower()
+        lp = st.text_input(t['pass'], type="password", key="l_p").strip()
+        
+        c_l1, c_l2 = st.columns([1, 4])
+        if c_l1.button(t['login']):
+            user = conn.execute("SELECT id, role, shop_name, email, status FROM users WHERE LOWER(email)=? AND password=?", (le, lp)).fetchone()
+            if user:
+                if user[4] == 'Blocked': st.error("Account Blocked! Contact Sahil & Arman IT Solutions.")
+                else:
+                    st.session_state.auth = True
+                    st.session_state.u_id, st.session_state.u_role, st.session_state.u_shop, st.session_state.u_email = user[0], user[1], user[2], user[3]
+                    st.rerun()
+            else: st.error("Invalid Details!")
+        
+        st.markdown("---")
+        c_alt1, c_alt2 = st.columns(2)
+        if c_alt1.button(t['register']): st.session_state.view = "register"; st.rerun()
+        if c_alt2.button(t['forgot']): st.session_state.view = "forgot"; st.rerun()
 
-# ---------------- SUPER ADMIN ----------------
-if st.session_state.u_role == "super_admin":
+    # 🟡 REGISTER VIEW
+    elif st.session_state.view == "register":
+        st.subheader(t['register'])
+        reg_sn = st.text_input(t['shop'])
+        reg_ph = st.text_input(t['phone'])
+        reg_e = st.text_input(t['email'], key="r_e").strip().lower()
+        reg_p = st.text_input(t['pass'], key="r_p").strip()
+        reg_sq = st.text_input(t['s_q'])
+        reg_sa = st.text_input(t['s_a'])
+        
+        c_r1, c_r2 = st.columns([1, 4])
+        if c_r1.button("Create Account & Enter"):
+            if reg_sn and reg_e and reg_p:
+                try:
+                    cur = conn.cursor()
+                    cur.execute("INSERT INTO users (email, password, shop_name, role, phone, security_q, security_a, status) VALUES (?,?,?,?,?,?,?,?)", 
+                                 (reg_e, reg_p, reg_sn, 'admin', reg_ph, reg_sq, reg_sa, 'Active'))
+                    conn.commit()
+                    st.session_state.auth = True
+                    st.session_state.u_id = cur.lastrowid
+                    st.session_state.u_role = 'admin'
+                    st.session_state.u_shop = reg_sn
+                    st.session_state.u_email = reg_e
+                    st.rerun()
+                except: st.error("Email already exists!")
+            else: st.warning("Please fill essential fields")
+        
+        if c_r2.button("← Back to Login"): st.session_state.view = "login"; st.rerun()
 
-    st.sidebar.title("🛡 SUPER ADMIN")
-    menu = st.sidebar.radio(
-        "ADMIN PANEL",
-        ["Partner Payments", "Global Stats"]
-    )
+    # 🔴 FORGOT PASSWORD VIEW
+    elif st.session_state.view == "forgot":
+        st.subheader(t['forgot'])
+        fe = st.text_input("Recovery Email").strip().lower()
+        if fe:
+            f_user = conn.execute("SELECT security_q, security_a, password FROM users WHERE LOWER(email)=?", (fe,)).fetchone()
+            if f_user:
+                st.info(f"Question: {f_user[0]}")
+                ans = st.text_input("Your Answer")
+                if st.button("Recover Password"):
+                    if ans == f_user[1]: st.success(f"Your Password is: {f_user[2]}")
+                    else: st.error("Wrong Answer!")
+            else: st.error("Email not found.")
+        if st.button("← Back to Login"): st.session_state.view = "login"; st.rerun()
 
-    if menu == "Partner Payments":
-        st.header("💳 Partner Management")
-
-        shops = pd.read_sql(
-            "SELECT id, shop_name, phone, fee_status FROM users WHERE role='admin'",
-            conn
-        )
-        st.dataframe(shops, use_container_width=True)
-
-        shop_map = dict(zip(shops['id'], shops['shop_name']))
-        sid = st.selectbox(
-            "Select Shop",
-            shop_map.keys(),
-            format_func=lambda x: shop_map[x]
-        )
-
-        if st.button("📲 Send WhatsApp Payment Reminder"):
-            s_data = conn.execute(
-                "SELECT shop_name, phone FROM users WHERE id=?",
-                (sid,)
-            ).fetchone()
-
-            if s_data:
-                msg = f"Dear {s_data[0]}, your Tailor Master Pro subscription payment is pending."
-                url = f"https://wa.me/{s_data[1]}?text={urllib.parse.quote(msg)}"
-                st.markdown(f"[👉 Click to Send Reminder]({url})")
-            else:
-                st.error("Invalid shop selected")
-
-    elif menu == "Global Stats":
-        analytics.show_global_stats(conn)
-
-# ---------------- SHOPKEEPER ----------------
 else:
-    st.sidebar.title("🏪 SHOP PANEL")
-
-    menu = st.sidebar.radio(
-        "MENU",
-        ["Dashboard", "New Order", "Reports", "Security"]
-    )
-
-    # -------- Fee Lock --------
-    fee_status = conn.execute(
-        "SELECT fee_status FROM users WHERE id=?",
-        (st.session_state.u_id,)
-    ).fetchone()[0]
-
-    if fee_status != "paid":
-        st.error("⚠ Subscription pending. Please contact Sahil & Arman IT Company.")
-        st.stop()
-
-    # -------- Dashboard --------
-    if menu == "Dashboard":
-        st.header(f"📊 Dashboard — {st.session_state.u_shop}")
-
-        stats = pd.read_sql(
-            """
-            SELECT 
-                SUM(total) t,
-                SUM(advance) a,
-                SUM(remaining) r
-            FROM clients
-            WHERE user_id=?
-            """,
-            conn,
-            params=(st.session_state.u_id,)
-        )
-
-        c1, c2, c3 = st.columns(3)
-        c1.metric("💰 Sales", f"Rs. {stats['t'].iloc[0] or 0:,.0f}")
-        c2.metric("✅ Received", f"Rs. {stats['a'].iloc[0] or 0:,.0f}")
-        c3.metric("⏳ Outstanding", f"Rs. {stats['r'].iloc[0] or 0:,.0f}")
-
-        df = pd.read_sql(
-            """
-            SELECT name, phone, remaining, status
-            FROM clients
-            WHERE user_id=?
-            ORDER BY remaining DESC
-            """,
-            conn,
-            params=(st.session_state.u_id,)
-        )
-        st.dataframe(df, use_container_width=True)
-
-    # -------- New Order --------
-    elif menu == "New Order":
-        add_order_ui(st.session_state.u_id)
-
-    # -------- Reports --------
-    elif menu == "Reports":
-        analytics.show_shop_reports(conn, st.session_state.u_id)
-
-    # -------- Security --------
-    elif menu == "Security":
-        st.header("🔐 Account Security")
-
-        u_data = conn.execute(
-            """
-            SELECT shop_name, email, phone, fee_status
-            FROM users WHERE id=?
-            """,
-            (st.session_state.u_id,)
-        ).fetchone()
-
-        st.markdown(
-            f"""
-            **Shop:** {u_data[0]}  
-            **Email:** {u_data[1]}  
-            **Phone:** {u_data[2]}  
-            **Subscription:** {u_data[3]}
-            """
-        )
-
-# ---------------- LOGOUT ----------------
-st.sidebar.markdown("---")
-if st.sidebar.button("🚪 Logout"):
-    st.session_state.clear()
-    st.rerun()
-
-# ---------------- FOOTER ----------------
-st.markdown(
-    "<center><small>Powered by <b>Sahil & Arman IT Company</b></small></center>",
-    unsafe_allow_html=True
-)
+    # --- AFTER LOGIN: SHOW ANALYTICS ---
+    st.sidebar.title(f"Welcome, {st.session_state.u_shop}")
+    if st.sidebar.button("Logout"):
+        st.session_state.auth = False
+        st.rerun()
+    
+    # Analytics function call
+    show_global_stats(conn)

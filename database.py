@@ -1,28 +1,28 @@
 import sqlite3
-from datetime import date, timedelta
 
 def get_connection():
-    return sqlite3.connect('tailor_master_v14.db', check_same_thread=False)
-
-def init_db():
-    conn = get_connection()
-    c = conn.cursor()
-    # Users table with Expiry Date
-    c.execute('''CREATE TABLE IF NOT EXISTS users 
-        (id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT UNIQUE, password TEXT, 
-         shop_name TEXT, role TEXT, phone TEXT, fee_status TEXT DEFAULT 'Unpaid', 
-         security_q TEXT, security_a TEXT, status TEXT DEFAULT 'Active', 
-         expiry_date DATE)''')
-
-    # Super Admin (Life-time Access)
-    c.execute("SELECT * FROM users WHERE email='admin@sahilarman.com'")
-    if not c.fetchone():
-        c.execute("INSERT INTO users (email, password, shop_name, role, fee_status, status, expiry_date) VALUES (?,?,?,?,?,?,?)", 
-                  ('admin@sahilarman.com', 'sahilarman2026', 'Sahil & Arman IT Co', 'super_admin', 'Paid', 'Active', '2099-12-31'))
-
-    c.execute('''CREATE TABLE IF NOT EXISTS clients 
-        (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, name TEXT, phone TEXT, 
-         total REAL, advance REAL, remaining REAL, pay_method TEXT, order_date DATE, 
-         delivery_date DATE, m_data TEXT, s_data TEXT, verbal_notes TEXT, status TEXT DEFAULT 'Pending')''')
+    conn = sqlite3.connect("tailor_master.db", check_same_thread=False)
+    # Tables creation
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, 
+            email TEXT UNIQUE, password TEXT, shop_name TEXT, 
+            role TEXT, phone TEXT, security_q TEXT, security_a TEXT, 
+            status TEXT DEFAULT 'Active'
+        )
+    """)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS orders (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER, client_name TEXT, client_phone TEXT,
+            length TEXT, shoulder TEXT, chest TEXT, waist TEXT, sleeves TEXT, neck TEXT, bottom TEXT,
+            payment_method TEXT, total_bill REAL, paid_amount REAL,
+            order_date TEXT, status TEXT DEFAULT 'Pending'
+        )
+    """)
+    # Admin creation
+    admin_check = conn.execute("SELECT id FROM users WHERE email='admin@sahilarman.com'").fetchone()
+    if not admin_check:
+        conn.execute("INSERT INTO users (email, password, shop_name, role, status) VALUES ('admin@sahilarman.com', 'sahilarman2026', 'Super Admin', 'super_admin', 'Active')")
     conn.commit()
-    conn.close()
+    return conn

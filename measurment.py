@@ -81,8 +81,38 @@ def show_order_form(conn, ln):
                 conn.commit()
                 st.success("Order Registered in Diary! ✅")
             else: st.error("Client Name and Phone are required!")
+import streamlit as st
+from datetime import datetime
 
+def show_order_form(conn, ln):
+    st.header(ln['order'])
+    with st.form("new_order_form"):
+        # ... Measurements section ...
+        
+        st.subheader("💰 Bill Calculator")
+        c1, c2, c3, c4 = st.columns(4)
+        suits = c1.number_input(ln['suits'], min_value=1, step=1)
+        total = c2.number_input(ln['total'], min_value=0.0)
+        paid = c3.number_input("Advance Paid", min_value=0.0)
+        
+        # Calculation logic
+        balance = total - paid
+        c4.metric(ln['bal'], f"Rs. {balance}")
+
+        st.subheader("💳 Payment Details")
+        p1, p2, p3 = st.columns(3)
+        via = p1.selectbox(ln['via'], ["Cash", "JazzCash", "EasyPaisa", "Bank Account"])
+        acc_no = p2.text_input(ln['acc_no'])
+        acc_name = p3.text_input(ln['acc_name'])
+
+        if st.form_submit_button(ln['save']):
+            conn.execute("""INSERT INTO orders (user_id, client_name, client_phone, total_suits, total_bill, paid_amount, balance, acc_no, acc_name, payment_via, order_date) 
+                         VALUES (?,?,?,?,?,?,?,?,?,?,?)""", 
+                         (st.session_state.u_id, "Name", "Phone", suits, total, paid, balance, acc_no, acc_name, via, datetime.now().strftime("%Y-%m-%d")))
+            conn.commit()
+            st.success("Order Saved! ✅")
     # Row add karne ka button form ke bahir taake state update ho sake
     if st.button(ln['add_field']):
         st.session_state.custom_rows.append("")
         st.rerun()
+

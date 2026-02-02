@@ -173,6 +173,38 @@ else:
             st.session_state.u_shop = new_shop_name # Update session state immediately
             st.success("Shop Name Updated Successfully! ✅")
             st.rerun() # Rerun to reflect changes in sidebar/dashboard
+# ... Inside app.py navigation logic ...
 
+elif menu == ln['cashbook']:
+    st.header(ln['cashbook'])
+    today = datetime.now().strftime("%Y-%m-%d")
+    
+    # Calculate Today's Income (Sum of paid_amount)
+    inc_query = f"SELECT SUM(paid_amount) FROM orders WHERE user_id={st.session_state.u_id} AND order_date='{today}'"
+    income = conn.execute(inc_query).fetchone()[0] or 0.0
+    
+    # Calculate Today's Expenses
+    exp_query = f"SELECT SUM(amount) FROM expenses WHERE user_id={st.session_state.u_id} AND exp_date='{today}'"
+    expense = conn.execute(exp_query).fetchone()[0] or 0.0
+    
+    savings = income - expense
+
+    # Display Metrics
+    m1, m2, m3 = st.columns(3)
+    m1.metric(ln['today_inc'], f"Rs. {income}", delta_color="normal")
+    m2.metric(ln['today_exp'], f"Rs. {expense}", delta="-", delta_color="inverse")
+    m3.metric(ln['savings'], f"Rs. {savings}")
+
+    st.markdown("---")
+    # Add New Expense Form
+    with st.expander(ln['add_exp']):
+        desc = st.text_input(ln['exp_desc'])
+        amt = st.number_input(ln['amount'], min_value=0.0)
+        if st.button("Save Expense"):
+            conn.execute("INSERT INTO expenses (user_id, description, amount, exp_date) VALUES (?,?,?,?)", 
+                         (st.session_state.u_id, desc, amt, today))
+            conn.commit()
+            st.rerun()
 # Main Content Container End
 st.markdown('</div>', unsafe_allow_html=True)
+

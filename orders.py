@@ -4,8 +4,10 @@ from datetime import date
 from database import get_connection
 
 def add_order_ui(user_id, t):
-    st.markdown(f"### {t['new_order']}")
-    with st.form("pro_order"):
+    st.markdown(f"### 📝 {t['new_order']}")
+    
+    with st.form("professional_order_form"):
+        # Basic Info
         c1, c2, c3, c4 = st.columns(4)
         name = c1.text_input(t['cust_name'])
         phone = c2.text_input(t['phone'])
@@ -13,8 +15,9 @@ def add_order_ui(user_id, t):
         adv = c4.number_input(t['advance'], min_value=0)
 
         st.markdown("---")
+        # Layout: Measurements (Left) vs Styles (Right)
         col_m, col_s = st.columns(2)
-        
+
         with col_m:
             st.markdown(f"#### 📏 {t['meas']}")
             m1, m2 = st.columns(2)
@@ -37,14 +40,24 @@ def add_order_ui(user_id, t):
             
             st.markdown("---")
             verbal = st.text_area(t['verbal'])
-            pay = st.selectbox(t['pay_mode'], ["Cash", "EasyPaisa", "JazzCash", "Bank"])
+            pay = st.selectbox(t['pay_mode'], ["Cash", "EasyPaisa", "JazzCash", "Bank Transfer"])
             dd = st.date_input(t['del_date'])
 
-        if st.form_submit_button(t['save']):
-            conn = get_connection()
-            rem = total - adv
-            # Save logic (Same as before)
-            conn.execute("INSERT INTO clients (user_id, name, phone, total, advance, remaining, pay_method, order_date, delivery_date, verbal_notes) VALUES (?,?,?,?,?,?,?,?,?,?)",
-                         (user_id, name, phone, total, adv, rem, pay, date.today(), dd, verbal))
-            conn.commit()
-            st.success("Saved!")
+        # IMPORTANT: Added Submit Button to fix error
+        submit_button = st.form_submit_button(t['save'])
+
+        if submit_button:
+            if name and phone:
+                conn = get_connection()
+                rem = total - adv
+                m_data = {"Length": l_len, "Sleeves": l_slv, "Shoulder": l_shl, "Collar": l_col}
+                s_data = {"Fitting": fit, "Double_Stitch": db_st, "Gum_Silai": gum_st}
+                
+                conn.execute('''INSERT INTO clients 
+                    (user_id, name, phone, total, advance, remaining, pay_method, order_date, delivery_date, m_data, s_data, verbal_notes, status) 
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)''',
+                    (user_id, name, phone, total, adv, rem, pay, date.today(), dd, json.dumps(m_data), json.dumps(s_data), verbal, 'Pending'))
+                conn.commit()
+                st.success(f"✅ Order for {name} saved!")
+            else:
+                st.error("Please enter Name and Phone!")

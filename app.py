@@ -39,7 +39,64 @@ if not st.session_state.logged_in:
                 st.error("Invalid Email or Password!")
         
         st.info("💡 Super Admin Login: admin@sahilarman.com / sahilarman2026")
+# --- SUPER ADMIN MENU LOGIC ---
+if st.session_state.user_role == "super_admin":
+    menu = st.sidebar.selectbox("🚀 SUPER ADMIN PANEL", 
+        ["🌍 Global Dashboard", "➕ Register New Shop", "👥 All Registered Shops", "📊 Platform Analytics"])
 
+    if menu == "🌍 Global Dashboard":
+        st.subheader("🌎 Global Overview (All Shops Combined)")
+        all_clients = pd.read_sql("""
+            SELECT clients.id, users.shop_name as Shop, clients.name as Customer, clients.total, clients.remaining, clients.status 
+            FROM clients JOIN users ON clients.user_id = users.id
+        """, conn)
+        
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Total Platform Shops", conn.execute("SELECT COUNT(*) FROM users WHERE role='admin'").fetchone()[0])
+        c2.metric("Total Global Revenue", f"Rs.{all_clients['total'].sum():,.0f}")
+        c3.metric("Total Recovery Pending", f"Rs.{all_clients['remaining'].sum():,.0f}")
+        
+        st.write("### 📜 Recent Orders Across Platform")
+        st.dataframe(all_clients.tail(10), use_container_width=True)
+
+    elif menu == "👥 All Registered Shops":
+        st.subheader("👥 Registered Shops List")
+        shops_df = pd.read_sql("SELECT id, shop_name, email FROM users WHERE role='admin'", conn)
+        st.dataframe(shops_df, use_container_width=True)
+        
+        st.markdown("---")
+        st.subheader("🔍 Inspect Specific Shop Data")
+        selected_shop_id = st.selectbox("Select Shop to View Details", shops_df['id'].tolist(), format_func=lambda x: shops_df[shops_df['id']==x]['shop_name'].values[0])
+        
+        if selected_shop_id:
+            shop_name = shops_df[shops_df['id']==selected_shop_id]['shop_name'].values[0]
+            st.info(f"Viewing Data for: **{shop_name}**")
+            
+            # Drill down into selected shop's customers
+            shop_data = pd.read_sql(f"SELECT name, phone, total, advance, remaining, status FROM clients WHERE user_id={selected_shop_id}", conn)
+            
+            if not shop_data.empty:
+                st.dataframe(shop_data, use_container_width=True)
+                # Shop-specific metrics
+                sc1, sc2 = st.columns(2)
+                sc1.metric(f"{shop_name} Sales", f"Rs.{shop_data['total'].sum():,.0f}")
+                sc2.metric(f"{shop_name} Pending", f"Rs.{shop_data['remaining'].sum():,.0f}")
+            else:
+                st.warning("Is shop ne abhi tak koi order record nahi kiya.")
+
+    elif menu == "➕ Register New Shop":
+        # ... (Vahi purana registration code)
+        st.subheader("📝 Register New Client Shop")
+        with st.form("reg_form"):
+            s_name = st.text_input("New Shop Name")
+            s_email = st.text_input("Admin Email")
+            s_pass = st.text_input("Password")
+            if st.form_submit_button("Register & Activate Shop"):
+                try:
+                    conn.execute("INSERT INTO users (email, password, shop_name, role) VALUES (?,?,?,?)", (s_email, s_pass, s_name, 'admin'))
+                    conn.commit()
+                    st.success(f"{s_name} register ho gayi hai!")
+                except: st.error("Email pehle se maujood hai.")
 # --- LOGGED IN AREA ---
 else:
     # Sidebar
@@ -104,3 +161,4 @@ else:
         st.session_state.logged_in = False
         st.session_state.user_role = None
         st.rerun()
+

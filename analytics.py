@@ -1,29 +1,36 @@
 import streamlit as st
 import pandas as pd
+import plotly.express as px
 from database import get_connection
 
 def show_global_stats():
     conn = get_connection()
-    st.header("🌍 Platform Overview")
-    
-    # Platform ki total kamai (Summary)
-    total_sales = pd.read_sql("SELECT SUM(total) as t FROM clients", conn).iloc[0,0] or 0
-    total_shops = pd.read_sql("SELECT COUNT(*) as c FROM users WHERE role='admin'", conn).iloc[0,0]
+    st.header("🌍 Global Revenue Overview")
+    df = pd.read_sql("SELECT shop_name, fee_status FROM users WHERE role='admin'", conn)
+    sales = pd.read_sql("SELECT total, remaining FROM clients", conn)
     
     c1, c2 = st.columns(2)
-    c1.metric("Total Registered Shops", total_shops)
-    c2.metric("Total Business Volume", f"Rs.{total_sales:,.0f}")
-
-    st.markdown("---")
-    st.subheader("💳 Shop Fee Status")
-    shops = pd.read_sql("SELECT id, shop_name, email, fee_status FROM users WHERE role='admin'", conn)
-    st.table(shops)
+    c1.metric("Total Partners", len(df))
+    c2.metric("Total Business Vol.", f"Rs.{sales['total'].sum():,.0f}")
+    st.dataframe(df, use_container_width=True)
 
 def show_shop_reports(user_id):
     conn = get_connection()
-    st.header("📊 My Performance")
-    df = pd.read_sql(f"SELECT order_date, total FROM clients WHERE user_id={user_id}", conn)
+    st.header("📊 My Business Reports")
+    df = pd.read_sql(f"SELECT order_date, total, remaining, pay_method FROM clients WHERE user_id={user_id}", conn)
+    
     if not df.empty:
-        st.line_chart(df.set_index('order_date'))
+        c1, c2 = st.columns(2)
+        with c1:
+            st.write("📈 Sales Progress")
+            fig = px.area(df, x='order_date', y='total', color_discrete_sequence=['#38bdf8'])
+            st.plotly_chart(fig, use_container_width=True)
+        with c2:
+            st.write("💳 Payment Methods Used")
+            pay_fig = px.pie(df, names='pay_method', hole=.4)
+            st.plotly_chart(pay_fig, use_container_width=True)
+            
+        st.subheader("💰 Recent History")
+        st.dataframe(df, use_container_width=True)
     else:
-        st.info("Start adding orders to see charts!")
+        st.warning("Pehle kuch orders add karein taaki reports generate ho sakein.")

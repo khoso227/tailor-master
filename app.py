@@ -1,10 +1,11 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-from modules.database import init_db, get_connection
-from modules.styling import apply_styling
-from modules.orders import add_order_ui
 
+# Import directly (No modules folder)
+from database import init_db, get_connection
+from styling import apply_styling
+from orders import add_order_ui
 # Initialize System
 init_db()
 conn = get_connection()
@@ -70,4 +71,5 @@ else:
 
     # --- Staff ---
     elif menu == "👥 Staff":
+
         st.info("Staff management module is under construction by Sahil & Arman IT Co.")

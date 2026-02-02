@@ -3,24 +3,34 @@ import pandas as pd
 import plotly.express as px
 from database import get_connection
 
-def show_reports():
-    st.header("📊 Business Growth Analytics")
+def show_global_stats():
     conn = get_connection()
-    df = pd.read_sql("SELECT order_date, total, remaining FROM clients", conn)
+    st.header("🌍 Platform Global Analytics")
+    
+    # Global Metrics
+    data = pd.read_sql("SELECT shop_name, fee_status, id FROM users WHERE role='admin'", conn)
+    clients = pd.read_sql("SELECT total, remaining, order_date FROM clients", conn)
+    
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Total Shops", len(data))
+    c2.metric("Total Platform Revenue", f"Rs.{clients['total'].sum():,.0f}")
+    c3.metric("Total Outstanding", f"Rs.{clients['remaining'].sum():,.0f}")
+
+    st.subheader("💳 Shop Fee Status")
+    st.dataframe(data[['shop_name', 'fee_status']], use_container_width=True)
+
+def show_shop_reports(user_id):
+    conn = get_connection()
+    df = pd.read_sql(f"SELECT order_date, total, remaining FROM clients WHERE user_id={user_id}", conn)
     
     if not df.empty:
-        df['order_date'] = pd.to_datetime(df['order_date'])
-        
-        # Sales Chart
-        st.subheader("Sales Trend (Revenue)")
-        fig = px.area(df, x='order_date', y='total', title="Daily Revenue Flow", color_discrete_sequence=['#d4af37'])
+        st.subheader("📈 My Sales Growth")
+        fig = px.line(df, x='order_date', y='total', title="Revenue over time")
         st.plotly_chart(fig, use_container_width=True)
         
-        # Recovery Chart
-        st.subheader("Recovery vs Pending")
-        fig2 = px.pie(values=[df['total'].sum(), df['remaining'].sum()], 
-                      names=['Total Revenue', 'Pending Recovery'],
-                      color_discrete_sequence=['#2ecc71', '#e74c3c'])
+        st.subheader("💰 Financial Balance")
+        fig2 = px.pie(values=[df['total'].sum() - df['remaining'].sum(), df['remaining'].sum()], 
+                      names=['Received', 'Pending'], hole=.4)
         st.plotly_chart(fig2)
     else:
-        st.info("Analytics dikhane ke liye pehle data add karein.")
+        st.info("No data yet to show reports.")

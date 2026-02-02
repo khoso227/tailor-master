@@ -3,7 +3,7 @@ import pandas as pd
 from database import get_connection
 from translations import TRANSLATIONS
 from styling import apply_style
-from measurment import show_order_form
+from measurment import show_order_form # Spelling fixed as per your file
 
 # 1. Database Connection & Basic Config
 conn = get_connection()
@@ -44,7 +44,8 @@ if not st.session_state.auth:
             st.session_state.view = "register"
             st.rerun()
             
-        if st.button(ln['forgot_btn'], variant="ghost"):
+        # Error yahan tha, humne variant="ghost" hata diya hai
+        if st.button(ln['forgot_btn']):
             st.session_state.view = "forgot"
             st.rerun()
 
@@ -103,22 +104,16 @@ else:
             st.session_state.auth = False
             st.rerun()
 
-    # Routing
     if menu == ln['order']:
         show_order_form(conn, ln)
         
     elif menu == ln['dash'] or menu == ln['report']:
         st.header(menu)
-        # Summary Metrics & Table
-        df = pd.read_sql(f"SELECT client_name, client_phone, total_bill, order_date, status FROM orders WHERE user_id={st.session_state.u_id}", conn)
-        if not df.empty:
-            st.dataframe(df, use_container_width=True)
-        else:
-            st.info("No orders found yet. Create your first order!")
+        df = pd.read_sql(f"SELECT client_name, client_phone, total_bill, order_date FROM orders WHERE user_id={st.session_state.u_id}", conn)
+        st.dataframe(df, use_container_width=True)
             
     elif menu == ln['sec']:
         st.header(ln['sec'])
-        st.subheader("Account Settings")
         new_sn = st.text_input(ln['rename_shop'], value=st.session_state.u_shop)
         if st.button(ln['update']):
             conn.execute("UPDATE users SET shop_name=? WHERE id=?", (new_sn, st.session_state.u_id))
@@ -128,4 +123,3 @@ else:
             st.rerun()
 
 st.markdown('</div>', unsafe_allow_html=True)
-

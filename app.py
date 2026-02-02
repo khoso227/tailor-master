@@ -34,7 +34,26 @@ if not st.session_state.auth:
 else:
     # --- Sidebar Navigation ---
     menu = st.sidebar.selectbox("🚀 ERP MENU", 
-        ["🏠 Dashboard", "📏 New Order", "📊 Analytics", "👥 Staff", "⚙️ Settings"])
+        ["🏠 Dashboard", "📏 New Order", "📊 Analytics"# app.py ke menu section mein ye lines add karein:
+
+    # --- New Analytics Section ---
+    elif menu == "📊 Analytics":
+        import analytics
+        analytics.show_reports()
+
+    # --- Staff Management ---
+    elif menu == "👥 Staff":
+        st.subheader("👥 Karigar & Staff Management")
+        with st.form("staff_form"):
+            s_name = st.text_input("Karigar Name")
+            s_role = st.selectbox("Role", ["Master Cutter", "Stitcher", "Helper"])
+            if st.form_submit_button("Add Staff"):
+                conn.execute("INSERT INTO staff (name, role) VALUES (?,?)", (s_name, s_role))
+                conn.commit()
+                st.success("Staff added!")
+        
+        staff_df = pd.read_sql("SELECT * FROM staff", conn)
+        st.table(staff_df), "👥 Staff", "⚙️ Settings"])
     
     if st.sidebar.button("Logout"):
         st.session_state.auth = False
@@ -73,3 +92,4 @@ else:
     elif menu == "👥 Staff":
 
         st.info("Staff management module is under construction by Sahil & Arman IT Co.")
+

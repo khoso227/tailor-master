@@ -2,14 +2,15 @@ import streamlit as st
 import pandas as pd
 from datetime import date
 import urllib.parse
-from modules.database import get_connection
+# FIX: Direct import because file is in the same folder
+from database import get_connection
 
 def add_order_ui(labels):
     st.subheader("➕ New Client Registration")
     with st.form("new_order_form"):
         c1, c2, c3 = st.columns(3)
         name = c1.text_input("Customer Name")
-        phone = c2.text_input("Mobile (with 92...)")
+        phone = c2.text_input("Mobile (e.g. 923...)")
         suits = c3.number_input("Number of Suits", 1)
 
         c1, c2, c3 = st.columns(3)
@@ -30,7 +31,7 @@ def add_order_ui(labels):
             if name and phone:
                 conn = get_connection()
                 rem = total - adv
-                m_str = str(m_results) # Converting measurements to string for DB
+                m_str = str(m_results)
                 conn.execute("INSERT INTO clients (name, phone, suits_count, total, advance, remaining, status, order_date, delivery_date, m_data, staff_assigned, notes) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
                              (name, phone, suits, total, adv, rem, 'Cutting', date.today(), del_date, m_str, staff, notes))
                 conn.commit()
@@ -38,6 +39,8 @@ def add_order_ui(labels):
                 st.success("Order Saved Successfully!")
                 
                 # WhatsApp Logic
-                msg = f"Salam {name}, Welcome to our shop! Your order for {suits} suits is booked. Total: {total}, Advance: {adv}. Delivery on {del_date}. - Tailor Master"
+                msg = f"Salam {name}, Welcome to our shop! Your order for {suits} suits is booked. Total: {total}, Advance: {adv}. Delivery on {del_date}. - Tailor Master Pro"
                 url = f"https://wa.me/{phone}?text={urllib.parse.quote(msg)}"
-                st.markdown(f'<a href="{url}" target="_blank" class="whatsapp-btn">💬 Send Welcome Message</a>', unsafe_allow_html=True)
+                st.markdown(f'<a href="{url}" target="_blank" style="background-color: #25d366; color: white; padding: 10px; border-radius: 8px; text-decoration: none; font-weight: bold;">💬 Send Welcome Message</a>', unsafe_allow_html=True)
+            else:
+                st.error("Name aur Phone zaroori hain!")

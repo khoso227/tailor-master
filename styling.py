@@ -1,104 +1,24 @@
 import streamlit as st
+import random
 
-def apply_styling(theme_choice, lang):
-    # Colors
-    if theme_choice == "🌙 Night Mode":
-        bg, side_bg, text, accent = "#0f172a", "#1e293b", "#ffffff", "#38bdf8"
-    else:
-        bg, side_bg, text, accent = "#f8fafc", "#ffffff", "#1e293b", "#0284c7"
+DAY_WP = ["https://images.unsplash.com/photo-1558769132-cb1aea458c5e", "https://images.unsplash.com/photo-1520004434532-668416a08753", "https://images.unsplash.com/photo-1544441893-675973e31985", "https://images.unsplash.com/photo-1594932224828-b4b059b6f684", "https://images.unsplash.com/photo-1612423284934-2850a4ea6b0f", "https://images.unsplash.com/photo-1489987707025-afc232f7ea0f", "https://images.unsplash.com/photo-1534126511673-b68991578f6a", "https://images.unsplash.com/photo-1516762689617-e1cffcef479d", "https://images.unsplash.com/photo-1542060717-d79d9e463a8a", "https://images.unsplash.com/photo-1567401893414-76b7b1e5a7a5"]
+NIGHT_WP = ["https://images.unsplash.com/photo-1472457897821-70d3819a0e24", "https://images.unsplash.com/photo-1514306191717-452ec28c7814", "https://images.unsplash.com/photo-1537832816519-689ad163238b", "https://images.unsplash.com/photo-1490481651871-ab68de25d43d", "https://images.unsplash.com/photo-1556905085-86a42173d520", "https://images.unsplash.com/photo-1512436991641-6745cdb1723f", "https://images.unsplash.com/photo-1551488831-00ddcb6c6bd3", "https://images.unsplash.com/photo-1441986300917-64674bd600d8", "https://images.unsplash.com/photo-1555529771-835f59fc5efe", "https://images.unsplash.com/photo-1506157786151-b8491531f063"]
 
-    # RTL (Right to Left) logic for Urdu
-    alignment = "right" if lang == "Urdu" else "left"
-    direction = "rtl" if lang == "Urdu" else "ltr"
+def apply_style(ln):
+    with st.sidebar:
+        st.session_state.lang = st.selectbox("Language", ["English", "Urdu"], index=0 if st.session_state.lang=="English" else 1)
+        mood = st.radio("UI Mode", ["Day Mood ☀️", "Night Mood 🌙"])
+        if st.button(ln['shuffle']):
+            st.session_state.bg_choice = random.choice(DAY_WP if "Day" in mood else NIGHT_WP)
+    
+    if 'bg_choice' not in st.session_state: st.session_state.bg_choice = DAY_WP[0]
+    overlay = "rgba(255, 255, 255, 0.90)" if "Day" in mood else "rgba(0, 0, 0, 0.85)"
+    txt = "#111" if "Day" in mood else "#fff"
 
     st.markdown(f"""
-    <style>
-    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400;700&display=swap');
-    
-    * {{ font-family: 'Noto Sans Arabic', sans-serif; direction: {direction}; }}
-    
-    .stApp {{ background-color: {bg} !important; color: {text} !important; text-align: {alignment}; }}
-    
-    [data-testid="stSidebar"] {{
-        background-color: {side_bg} !important;
-        border-right: 2px solid {accent} !important;
-        text-align: left; /* Sidebar stays left for standard UI */
-    }}
-    
-    [data-testid="stSidebar"] * {{ color: {text} !important; font-weight: 700 !important; }}
-
-    div[data-testid="stMetric"] {{
-        background-color: {side_bg}; border: 2px solid {accent};
-        border-radius: 12px; padding: 15px; text-align: center;
-    }}
-
-    input, textarea, select {{
-        background-color: {side_bg} !important; color: {text} !important;
-        border: 1px solid {accent} !important; text-align: {alignment};
-    }}
-
-    h1, h2, h3, h4 {{ color: {accent} !important; }}
-    </style>
-    """, unsafe_allow_html=True)
-import streamlit as st
-
-def apply_styling(theme_choice, lang, wp_url=None):
-    # Colors logic
-    if theme_choice == "🌙 Night Mode":
-        bg, side_bg, text, accent = "#0f172a", "#1e293b", "#ffffff", "#38bdf8"
-        overlay = "rgba(15, 23, 42, 0.85)" # Dark overlay for readability
-    else:
-        bg, side_bg, text, accent = "#f8fafc", "#ffffff", "#1e293b", "#0284c7"
-        overlay = "rgba(248, 250, 252, 0.9)" # Light overlay
-
-    direction = "rtl" if lang == "Urdu" else "ltr"
-    alignment = "right" if lang == "Urdu" else "left"
-
-    # Background Image Styling
-    bg_style = ""
-    if wp_url:
-        bg_style = f"""
-        background-image: url('{wp_url}');
-        background-size: cover;
-        background-attachment: fixed;
-        """
-
-    st.markdown(f"""
-    <style>
-    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400;700&display=swap');
-    * {{ font-family: 'Noto Sans Arabic', sans-serif; direction: {direction}; }}
-
-    .stApp {{
-        {bg_style}
-        background-color: {bg};
-    }}
-
-    /* Main Content Overlay for readability on Wallpapers */
-    .main .block-container {{
-        background: {overlay};
-        border-radius: 20px;
-        padding: 40px !important;
-        margin-top: 30px;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-    }}
-
-    [data-testid="stSidebar"] {{
-        background-color: {side_bg} !important;
-        border-right: 2px solid {accent} !important;
-    }}
-    
-    [data-testid="stSidebar"] * {{ color: {text} !important; font-weight: 700 !important; }}
-
-    div[data-testid="stMetric"] {{
-        background: {side_bg}; border: 2px solid {accent};
-        border-radius: 12px; padding: 15px; text-align: center;
-    }}
-
-    input, textarea, select {{
-        background-color: {side_bg} !important; color: {text} !important;
-        border: 1px solid {accent} !important; text-align: {alignment};
-    }}
-
-    h1, h2, h3, h4 {{ color: {accent} !important; font-weight: 800; }}
-    </style>
+        <style>
+        .stApp {{ background-image: url("{st.session_state.bg_choice}"); background-size: cover; background-attachment: fixed; }}
+        .main-container {{ background-color: {overlay}; padding: 30px; border-radius: 15px; color: {txt}; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }}
+        h1, h2, h3, p, label {{ color: {txt} !important; {'text-align: right;' if st.session_state.lang=='Urdu' else ''} }}
+        </style>
     """, unsafe_allow_html=True)

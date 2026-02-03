@@ -449,4 +449,3 @@ def add_order_ui(user_id=None):
     conn = get_connection()
     show_order_form(conn)
     conn.close()
-

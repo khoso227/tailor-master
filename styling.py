@@ -1,7 +1,7 @@
 import streamlit as st
 import random
 
-def apply_styles():
+def apply_style():  # Function name is now 'apply_style' instead of 'apply_styles'
     """Apply custom CSS styles with day/night mode and wallpaper support"""
     
     # Initialize session state for theme
@@ -17,7 +17,7 @@ def apply_styles():
         # Nature (1-5)
         "https://images.unsplash.com/photo-1501854140801-50d01698950b?w=1600",
         "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=1600",
-        "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w-1600",
+        "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=1600",
         "https://images.unsplash.com/photo-1465146344425-f00d5f5c8f07?w=1600",
         "https://images.unsplash.com/photo-1439066615861-d1af74d74000?w=1600",
         

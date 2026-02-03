@@ -28,21 +28,31 @@ def show_order_form(conn, ln=None):
                     selected_customer = [c for c in customers 
                                        if f"{c['name']} ({c['phone']})" + (f" - {c.get('email', '')}" if c.get('email') else "") == selected_option][0]
                     
-                    # Store in session for auto-fill
-                    if st.button("Use This Customer", key="use_customer_btn"):
-                        st.session_state.prefilled_customer = {
-                            'name': selected_customer['name'],
-                            'phone': selected_customer['phone'],
-                            'email': selected_customer.get('email', ''),
-                            'address': selected_customer.get('address', '')
-                        }
-                        st.rerun()
+                    # Auto-fill using session state (NO BUTTON INSIDE EXPANDER)
+                    st.session_state.prefilled_customer = {
+                        'name': selected_customer['name'],
+                        'phone': selected_customer['phone'],
+                        'email': selected_customer.get('email', ''),
+                        'address': selected_customer.get('address', '')
+                    }
+                    st.rerun()
             else:
                 st.info("No customers found")
     
     # Check for pre-filled customer data
     prefilled = st.session_state.get('prefilled_customer', {})
     
+    # Initialize session state for order success
+    if 'order_saved' not in st.session_state:
+        st.session_state.order_saved = False
+        st.session_state.saved_order_details = {}
+    
+    # If order was just saved, show success message and options
+    if st.session_state.order_saved:
+        show_order_success(st.session_state.saved_order_details)
+        return
+    
+    # Main form
     with st.form("complete_order_form", clear_on_submit=True):
         # --- SECTION 1: SLIP HEADER ---
         col_h1, col_h2, col_h3, col_h4 = st.columns(4)
@@ -136,7 +146,6 @@ def show_order_form(conn, ln=None):
             normal_fit = st.checkbox("Normal Fit", key="normal_fit_cb")
             gum_silai = st.checkbox("Gum Silai", key="gum_silai_cb")
             double_silai = st.checkbox("Double Silai", key="double_silai_cb")
-            st.write("")
             side_pocket_qty = st.number_input("Side Pocket Qty", 0, 2, 0, key="side_pocket_qty_input")
 
         st.divider()
@@ -158,13 +167,14 @@ def show_order_form(conn, ln=None):
                                      placeholder="E.g. 17-6-1/4 swa, ya koi aur makhsoos nishani...",
                                      key="notes_input")
 
-        # Urgent order option (INSIDE FORM but as checkbox, not button)
+        # Urgent order option
         urgent_order = st.checkbox("🚨 Mark as Urgent Order", key="urgent_checkbox")
 
         # --- SECTION 5: FORM SUBMIT BUTTON (ONLY ONE IN FORM) ---
         submitted = st.form_submit_button("✅ SAVE COMPLETE ORDER")
         
         if submitted:
+            # Validate inputs
             if not client_name or not order_no or not phone_number:
                 st.error("⚠️ Order Number, Client Name and Phone Number are required!")
             
@@ -172,7 +182,8 @@ def show_order_form(conn, ln=None):
                 st.error("❌ Total Bill must be greater than 0")
             
             else:
-                save_order_to_db(
+                # Save order
+                success, order_details = save_order_to_db(
                     user_id=user_id,
                     client_name=client_name,
                     phone_number=phone_number,
@@ -225,13 +236,23 @@ def show_order_form(conn, ln=None):
                     urgent_order=urgent_order,
                     conn=conn
                 )
+                
+                if success:
+                    # Store success state and details
+                    st.session_state.order_saved = True
+                    st.session_state.saved_order_details = order_details
+                    # Clear pre-filled data
+                    if 'prefilled_customer' in st.session_state:
+                        del st.session_state.prefilled_customer
+                    st.rerun()
 
 def save_order_to_db(**kwargs):
-    """Save order to database"""
+    """Save order to database and return success status"""
     try:
         user_id = kwargs['user_id']
         client_name = kwargs['client_name']
         phone_number = kwargs['phone_number']
+        conn = kwargs['conn']
         
         # First, add or get client
         client_id = add_client(
@@ -245,159 +266,182 @@ def save_order_to_db(**kwargs):
         
         if client_id is None:
             # Client already exists, get existing client ID
-            conn = kwargs['conn']
             cursor = conn.cursor()
             cursor.execute("SELECT id FROM clients WHERE phone = ? AND user_id = ?", 
                          (phone_number, user_id))
             existing_client = cursor.fetchone()
             client_id = existing_client[0] if existing_client else None
         
-        if client_id:
-            # Create measurement data object
-            m_data_obj = {
-                "num_suits": kwargs['total_suits'],
-                "measurements": {
-                    "Length": kwargs.get('length', ''),
-                    "Sleeves": kwargs.get('sleeves', ''),
-                    "Shoulder": kwargs.get('shoulder', ''),
-                    "Collar": kwargs.get('collar', ''),
-                    "Chest": kwargs.get('chest', ''),
-                    "Lower Chest": kwargs.get('l_chest', ''),
-                    "Waist": kwargs.get('waist', ''),
-                    "Hip": kwargs.get('hip', ''),
-                    "Shalwar Length": kwargs.get('s_length', ''),
-                    "Bottom": kwargs.get('bottom', ''),
-                    "Pajama Length": kwargs.get('p_length', ''),
-                    "Pajama Waist": kwargs.get('p_waist', ''),
-                    "Pajama Hip": kwargs.get('p_hip', ''),
-                    "Thigh": kwargs.get('thigh', ''),
-                    "Pajama Bottom": kwargs.get('p_bottom', ''),
-                    "Fly": kwargs.get('fly', ''),
-                    "Shirt Length": kwargs.get('shirt_len', '')
-                },
-                "styles": {
-                    "Shirt Collar": kwargs.get('shirt_collar', False),
-                    "Sherwani Collar": kwargs.get('sherwani_collar', False),
-                    "Sada": kwargs.get('sada', False),
-                    "Design": kwargs.get('design', False),
-                    "Design No": kwargs.get('design_no', ''),
-                    "Cuff Sleeves": kwargs.get('cuff_sleeves', False),
-                    "Kurta Sleeves": kwargs.get('kurta_sleeves', False),
-                    "Gol Daman": kwargs.get('gol_daman', False),
-                    "Chakor Daman": kwargs.get('chakor_daman', False),
-                    "Side Pocket": kwargs.get('side_pocket', False),
-                    "Side Pocket Qty": kwargs.get('side_pocket_qty', 0),
-                    "Front Pocket": kwargs.get('front_pocket', False),
-                    "Shalwar Pocket": kwargs.get('shalwar_pocket', False),
-                    "Pajama Pocket": kwargs.get('pajama_pocket', False),
-                    "Shalwar Ghera": kwargs.get('shalwar_ghera', False),
-                    "Losing": kwargs.get('losing', False),
-                    "Normal Fit": kwargs.get('normal_fit', False),
-                    "Smart Fit": kwargs.get('smart_fit', False),
-                    "Gum Silai": kwargs.get('gum_silai', False),
-                    "Double Silai": kwargs.get('double_silai', False)
-                }
+        if not client_id:
+            return False, {"error": "Could not create or find client record"}
+        
+        # Create measurement data object
+        m_data_obj = {
+            "num_suits": kwargs['total_suits'],
+            "measurements": {
+                "Length": kwargs.get('length', ''),
+                "Sleeves": kwargs.get('sleeves', ''),
+                "Shoulder": kwargs.get('shoulder', ''),
+                "Collar": kwargs.get('collar', ''),
+                "Chest": kwargs.get('chest', ''),
+                "Lower Chest": kwargs.get('l_chest', ''),
+                "Waist": kwargs.get('waist', ''),
+                "Hip": kwargs.get('hip', ''),
+                "Shalwar Length": kwargs.get('s_length', ''),
+                "Bottom": kwargs.get('bottom', ''),
+                "Pajama Length": kwargs.get('p_length', ''),
+                "Pajama Waist": kwargs.get('p_waist', ''),
+                "Pajama Hip": kwargs.get('p_hip', ''),
+                "Thigh": kwargs.get('thigh', ''),
+                "Pajama Bottom": kwargs.get('p_bottom', ''),
+                "Fly": kwargs.get('fly', ''),
+                "Shirt Length": kwargs.get('shirt_len', '')
+            },
+            "styles": {
+                "Shirt Collar": kwargs.get('shirt_collar', False),
+                "Sherwani Collar": kwargs.get('sherwani_collar', False),
+                "Sada": kwargs.get('sada', False),
+                "Design": kwargs.get('design', False),
+                "Design No": kwargs.get('design_no', ''),
+                "Cuff Sleeves": kwargs.get('cuff_sleeves', False),
+                "Kurta Sleeves": kwargs.get('kurta_sleeves', False),
+                "Gol Daman": kwargs.get('gol_daman', False),
+                "Chakor Daman": kwargs.get('chakor_daman', False),
+                "Side Pocket": kwargs.get('side_pocket', False),
+                "Side Pocket Qty": kwargs.get('side_pocket_qty', 0),
+                "Front Pocket": kwargs.get('front_pocket', False),
+                "Shalwar Pocket": kwargs.get('shalwar_pocket', False),
+                "Pajama Pocket": kwargs.get('pajama_pocket', False),
+                "Shalwar Ghera": kwargs.get('shalwar_ghera', False),
+                "Losing": kwargs.get('losing', False),
+                "Normal Fit": kwargs.get('normal_fit', False),
+                "Smart Fit": kwargs.get('smart_fit', False),
+                "Gum Silai": kwargs.get('gum_silai', False),
+                "Double Silai": kwargs.get('double_silai', False)
             }
+        }
+        
+        m_data_json = json.dumps(m_data_obj)
+        cursor = conn.cursor()
+        
+        # Check database structure
+        cursor.execute("PRAGMA table_info(orders)")
+        columns = [col[1] for col in cursor.fetchall()]
+        
+        if 'client_id' in columns:
+            # New structure
+            cursor.execute("""
+                INSERT INTO orders (
+                    user_id, client_id, client_name, client_phone, 
+                    order_date, delivery_date, status, suits, 
+                    order_no, total_bill, advance, balance, 
+                    measurement_data, notes, address, is_synced
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                user_id, client_id, client_name, phone_number,
+                kwargs['booking_date'].strftime("%Y-%m-%d"),
+                kwargs['delivery_date'].strftime("%Y-%m-%d"),
+                'Urgent' if kwargs.get('urgent_order', False) else 'Pending',
+                kwargs['total_suits'],
+                kwargs['order_no'],
+                kwargs['total_bill'],
+                kwargs['advance_paid'],
+                kwargs['balance_due'],
+                m_data_json,
+                kwargs.get('verbal_notes', ''),
+                kwargs.get('address', ''),
+                0
+            ))
             
-            m_data_json = json.dumps(m_data_obj)
-            conn = kwargs['conn']
-            cursor = conn.cursor()
+            order_id = cursor.lastrowid
             
-            # Check database structure
-            cursor.execute("PRAGMA table_info(orders)")
-            columns = [col[1] for col in cursor.fetchall()]
-            
-            if 'client_id' in columns:
-                # New structure
+            # If advance paid, add to payments table
+            if kwargs['advance_paid'] > 0:
                 cursor.execute("""
-                    INSERT INTO orders (
-                        user_id, client_id, client_name, client_phone, 
-                        order_date, delivery_date, status, suits, 
-                        order_no, total_bill, advance, balance, 
-                        measurement_data, notes, address, is_synced
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    INSERT INTO payments (order_id, amount, payment_date, payment_method, notes)
+                    VALUES (?, ?, ?, ?, ?)
                 """, (
-                    user_id, client_id, client_name, phone_number,
-                    kwargs['booking_date'].strftime("%Y-%m-%d"),
-                    kwargs['delivery_date'].strftime("%Y-%m-%d"),
-                    'Urgent' if kwargs.get('urgent_order', False) else 'Pending',
-                    kwargs['total_suits'],
-                    kwargs['order_no'],
-                    kwargs['total_bill'],
+                    order_id,
                     kwargs['advance_paid'],
-                    kwargs['balance_due'],
-                    m_data_json,
-                    kwargs.get('verbal_notes', ''),
-                    kwargs.get('address', ''),
-                    0
+                    kwargs['booking_date'].strftime("%Y-%m-%d"),
+                    "Cash",
+                    f"Advance payment for order #{kwargs['order_no']}"
                 ))
-                
-                order_id = cursor.lastrowid
-                
-                # If advance paid, add to payments table
-                if kwargs['advance_paid'] > 0:
-                    cursor.execute("""
-                        INSERT INTO payments (order_id, amount, payment_date, payment_method, notes)
-                        VALUES (?, ?, ?, ?, ?)
-                    """, (
-                        order_id,
-                        kwargs['advance_paid'],
-                        kwargs['booking_date'].strftime("%Y-%m-%d"),
-                        "Cash",
-                        f"Advance payment for order #{kwargs['order_no']}"
-                    ))
-            
-            else:
-                # Old structure
-                cursor.execute("""
-                    INSERT INTO orders 
-                    (user_id, client_name, client_phone, total_bill, paid_amount, balance, 
-                     order_date, status, measurement_data, notes, order_no, is_synced) 
-                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
-                """, (
-                    user_id, client_name, phone_number, 
-                    kwargs['total_bill'], kwargs['advance_paid'], kwargs['balance_due'], 
-                    kwargs['booking_date'].strftime("%Y-%m-%d"), 
-                    'Urgent' if kwargs.get('urgent_order', False) else 'Pending', 
-                    m_data_json, kwargs.get('verbal_notes', ''), kwargs['order_no'], 0
-                ))
-            
-            conn.commit()
-            
-            # Clear pre-filled data
-            if 'prefilled_customer' in st.session_state:
-                del st.session_state.prefilled_customer
-            
-            # Show success message
-            st.success(f"🎉 Order #{kwargs['order_no']} for {client_name} ({kwargs['total_suits']} Suits) saved successfully!")
-            st.balloons()
-            
-            # Show next steps (OUTSIDE FORM - after form submission)
-            with st.container():
-                st.markdown("---")
-                st.subheader("📋 Next Steps")
-                col1, col2, col3 = st.columns(3)
-                
-                with col1:
-                    if st.button("📄 View This Order", key="view_order_btn"):
-                        # Store order_id in session to view later
-                        st.session_state.view_order_id = cursor.lastrowid
-                        st.rerun()
-                
-                with col2:
-                    if st.button("🖨️ Print Slip", key="print_slip_btn"):
-                        st.info("Print feature coming soon!")
-                
-                with col3:
-                    if st.button("➕ Add Another Order", key="add_another_btn"):
-                        st.rerun()
         
         else:
-            st.error("❌ Could not create or find client record")
+            # Old structure
+            cursor.execute("""
+                INSERT INTO orders 
+                (user_id, client_name, client_phone, total_bill, paid_amount, balance, 
+                 order_date, status, measurement_data, notes, order_no, is_synced) 
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+            """, (
+                user_id, client_name, phone_number, 
+                kwargs['total_bill'], kwargs['advance_paid'], kwargs['balance_due'], 
+                kwargs['booking_date'].strftime("%Y-%m-%d"), 
+                'Urgent' if kwargs.get('urgent_order', False) else 'Pending', 
+                m_data_json, kwargs.get('verbal_notes', ''), kwargs['order_no'], 0
+            ))
+            
+            order_id = cursor.lastrowid
+        
+        conn.commit()
+        
+        # Return success with order details
+        order_details = {
+            "order_id": order_id,
+            "order_no": kwargs['order_no'],
+            "client_name": client_name,
+            "suits": kwargs['total_suits'],
+            "total_bill": kwargs['total_bill'],
+            "balance_due": kwargs['balance_due']
+        }
+        
+        return True, order_details
     
     except Exception as e:
         st.error(f"❌ Database Error: {str(e)}")
-        st.info("💡 Tip: Please check database structure or contact support.")
+        return False, {"error": str(e)}
+
+def show_order_success(order_details):
+    """Show success message and next steps (COMPLETELY OUTSIDE FORM)"""
+    st.success(f"🎉 Order #{order_details['order_no']} for {order_details['client_name']} ({order_details['suits']} Suits) saved successfully!")
+    st.balloons()
+    
+    st.markdown("---")
+    st.subheader("📋 Next Steps")
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        if st.button("📄 View This Order", key="view_order_btn", use_container_width=True):
+            # Store order_id in session to view later
+            st.session_state.view_order_id = order_details['order_id']
+            st.session_state.order_saved = False
+            st.rerun()
+    
+    with col2:
+        if st.button("🖨️ Print Slip", key="print_slip_btn", use_container_width=True):
+            st.info("Print feature coming soon!")
+            # Reset for new order
+            st.session_state.order_saved = False
+            st.rerun()
+    
+    with col3:
+        if st.button("➕ Add Another Order", key="add_another_btn", use_container_width=True):
+            # Reset for new order
+            st.session_state.order_saved = False
+            st.rerun()
+    
+    # Quick stats
+    st.markdown("---")
+    col_stats1, col_stats2, col_stats3 = st.columns(3)
+    with col_stats1:
+        st.metric("Order Total", f"₹{order_details['total_bill']:,}")
+    with col_stats2:
+        st.metric("Balance Due", f"₹{order_details['balance_due']:,}")
+    with col_stats3:
+        st.metric("Order Status", "Pending")
 
 # Alternative function name for compatibility
 def add_order_ui(user_id=None):

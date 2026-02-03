@@ -5,17 +5,13 @@ from database import get_connection
 
 def add_order_ui(user_id):
     st.header("📏 Detailed Measurement Form")
-    
-    with st.form("azad_tailor_form"):
-        # Section 1: Basic
+    with st.form("azad_form"):
         c1, c2, c3 = st.columns(3)
         name = c1.text_input("Client Name")
         phone = c2.text_input("WhatsApp Number")
-        order_no = c3.text_input("Slip/Order No.", placeholder="e.g. 1793")
+        order_no = c3.text_input("Order No.", placeholder="e.g. 1793")
 
         st.markdown("---")
-        
-        # Section 2: Measurements (Azad Tailor Copy)
         m_col1, m_col2 = st.columns([2, 1])
         
         with m_col1:
@@ -55,24 +51,16 @@ def add_order_ui(user_id):
             dd = st.date_input("Delivery Date")
 
         st.markdown("---")
-        verbal = st.text_area("🗣️ Verbal Details & Special Requirements", placeholder="Yahan client ki zubani baten likhen...")
+        verbal = st.text_area("🗣️ Verbal Details", placeholder="Client ne jo zubani baten batayi...")
 
         if st.form_submit_button("✅ SAVE ORDER"):
             if name and phone:
                 conn = get_connection()
                 rem = total - adv
-                m_data = {
-                    "Length": l_len, "Sleeves": l_slv, "Shoulder": l_shl, "Collar": l_col,
-                    "Chest": l_chst, "Waist": l_wst, "Hip": l_hip, "Sh_Length": l_slen, 
-                    "Thigh": l_thigh, "Fly": l_fly, "Fitting": fit
-                }
+                m_data = {"Len": l_len, "Slv": l_slv, "Shl": l_shl, "Col": l_col, "Chst": l_chst, "Wst": l_wst, "Hip": l_hip, "S_Len": l_slen, "Thigh": l_thigh, "Fly": l_fly}
                 
-                query = '''INSERT INTO clients 
-                    (user_id, order_no, name, phone, total, advance, remaining, pay_method, order_date, delivery_date, m_data, verbal_notes) 
-                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?)'''
-                
-                conn.execute(query, (user_id, order_no, name, phone, total, adv, rem, pay, str(date.today()), str(dd), json.dumps(m_data), verbal))
+                query = "INSERT INTO clients (user_id, name, phone, order_no, total, advance, remaining, pay_method, order_date, delivery_date, m_data, verbal_notes) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)"
+                conn.execute(query, (user_id, name, phone, order_no, total, adv, rem, pay, str(date.today()), str(dd), json.dumps(m_data), verbal))
                 conn.commit()
-                st.success(f"Order #{order_no} Saved!")
-            else:
-                st.error("Name and Phone are required!")
+                st.success("✅ Order Saved!")
+            else: st.error("Name and Phone required!")

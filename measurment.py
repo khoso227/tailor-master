@@ -449,6 +449,4 @@ def add_order_ui(user_id=None):
     conn = get_connection()
     show_order_form(conn)
     conn.close()
-Step 1: Fill form → Submit
-Step 2: Order saves → Show success page
-Step 3: Success page has buttons (OUTSIDE FORM)
+

@@ -1,7 +1,7 @@
 import streamlit as st
 import random
 
-def apply_style(ln=None):  # ADDED PARAMETER HERE
+def apply_style(ln=None):  # ln parameter accept कर रहा है
     """Apply custom CSS styles with day/night mode and wallpaper support"""
     
     # Initialize session state for theme
@@ -59,12 +59,9 @@ def apply_style(ln=None):  # ADDED PARAMETER HERE
         "https://images.unsplash.com/photo-1562157873-818bc0726f68?w=1600"   # Thread spools
     ]
     
-    # If ln parameter is provided, it might be for language or location
-    # You can use it if needed, for example:
-    if ln:
-        # Store language in session state if needed
-        if 'language' not in st.session_state:
-            st.session_state.language = ln
+    # If ln parameter is provided (likely for language)
+    if ln and 'language' not in st.session_state:
+        st.session_state.language = ln
     
     # Theme toggle in sidebar
     with st.sidebar:
@@ -105,4 +102,350 @@ def apply_style(ln=None):  # ADDED PARAMETER HERE
     else:
         day_mode_css(st.session_state.wallpaper)
 
-# The rest of your code remains the same...
+# ========== DAY MODE CSS FUNCTION ==========
+def day_mode_css(wallpaper_url):
+    """Apply day mode CSS with wallpaper"""
+    st.markdown(f"""
+    <style>
+    /* Background with wallpaper */
+    .stApp {{
+        background: linear-gradient(rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.95)), 
+                    url('{wallpaper_url}');
+        background-size: cover;
+        background-attachment: fixed;
+        background-position: center;
+    }}
+    
+    /* Main container */
+    .main .block-container {{
+        background-color: rgba(255, 255, 255, 0.85);
+        border-radius: 15px;
+        padding: 2rem;
+        margin-top: 1rem;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    }}
+    
+    /* Sidebar styling */
+    section[data-testid="stSidebar"] {{
+        background-color: rgba(248, 249, 250, 0.95);
+        backdrop-filter: blur(10px);
+    }}
+    
+    /* Text colors */
+    h1, h2, h3, h4, h5, h6 {{
+        color: #2c3e50;
+    }}
+    
+    p, span, div, label {{
+        color: #34495e;
+    }}
+    
+    /* Button styling */
+    .stButton > button {{
+        background-color: #3498db;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-weight: 500;
+        transition: all 0.3s;
+    }}
+    
+    .stButton > button:hover {{
+        background-color: #2980b9;
+        transform: translateY(-2px);
+    }}
+    
+    /* Metric cards */
+    .stMetric {{
+        background-color: rgba(255, 255, 255, 0.9);
+        padding: 15px;
+        border-radius: 12px;
+        border: 1px solid #dee2e6;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }}
+    
+    /* Dataframe styling */
+    .dataframe {{
+        border-radius: 10px;
+        background-color: white;
+    }}
+    
+    /* Form styling */
+    .stForm {{
+        background-color: rgba(255, 255, 255, 0.95);
+        padding: 20px;
+        border-radius: 12px;
+        border: 1px solid #e9ecef;
+    }}
+    
+    /* Input fields */
+    .stTextInput > div > div > input,
+    .stNumberInput > div > div > input,
+    .stTextArea > div > div > textarea,
+    .stDateInput > div > div > input {{
+        background-color: white;
+        border: 1px solid #ced4da;
+        border-radius: 6px;
+    }}
+    
+    /* Success/Error messages */
+    .stAlert {{
+        border-radius: 8px;
+        border: none;
+    }}
+    
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {{
+        width: 8px;
+    }}
+    
+    ::-webkit-scrollbar-track {{
+        background: #f1f1f1;
+    }}
+    
+    ::-webkit-scrollbar-thumb {{
+        background: #888;
+        border-radius: 4px;
+    }}
+    
+    ::-webkit-scrollbar-thumb:hover {{
+        background: #555;
+    }}
+    </style>
+    """, unsafe_allow_html=True)
+
+# ========== NIGHT MODE CSS FUNCTION ==========
+def night_mode_css(wallpaper_url):
+    """Apply night mode CSS with dark theme and wallpaper"""
+    st.markdown(f"""
+    <style>
+    /* Background with wallpaper (darker overlay for night) */
+    .stApp {{
+        background: linear-gradient(rgba(0, 0, 0, 0.85), rgba(0, 0, 0, 0.9)), 
+                    url('{wallpaper_url}');
+        background-size: cover;
+        background-attachment: fixed;
+        background-position: center;
+        color: white !important;
+    }}
+    
+    /* Main container - dark glass effect */
+    .main .block-container {{
+        background-color: rgba(30, 30, 40, 0.85);
+        border-radius: 15px;
+        padding: 2rem;
+        margin-top: 1rem;
+        box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }}
+    
+    /* Sidebar styling - dark glass */
+    section[data-testid="stSidebar"] {{
+        background-color: rgba(20, 20, 30, 0.9) !important;
+        backdrop-filter: blur(10px);
+        border-right: 1px solid rgba(255, 255, 255, 0.1);
+    }}
+    
+    /* ALL TEXT WHITE IN NIGHT MODE */
+    h1, h2, h3, h4, h5, h6, p, span, div, label, li, td, th, strong, em, 
+    .stMarkdown, .stText, .stCode, .stDataFrame, .stMetric, .stAlert {{
+        color: white !important;
+    }}
+    
+    /* Specific white text for different elements */
+    .stMarkdown p, .stMarkdown h1, .stMarkdown h2, .stMarkdown h3 {{
+        color: white !important;
+    }}
+    
+    .stDataFrame td, .stDataFrame th {{
+        color: white !important;
+    }}
+    
+    .stMetric label, .stMetric div {{
+        color: white !important;
+    }}
+    
+    /* Button styling - neon glow effect */
+    .stButton > button {{
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-weight: 500;
+        transition: all 0.3s;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    }}
+    
+    .stButton > button:hover {{
+        background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+    }}
+    
+    /* Metric cards - dark glass */
+    .stMetric {{
+        background-color: rgba(40, 40, 60, 0.7);
+        padding: 15px;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    }}
+    
+    /* Dataframe styling - dark */
+    .dataframe {{
+        border-radius: 10px;
+        background-color: rgba(40, 40, 60, 0.7) !important;
+        color: white !important;
+    }}
+    
+    .dataframe th {{
+        background-color: rgba(60, 60, 80, 0.9) !important;
+        color: white !important;
+    }}
+    
+    .dataframe td {{
+        background-color: rgba(40, 40, 60, 0.7) !important;
+        color: white !important;
+    }}
+    
+    /* Form styling - dark glass */
+    .stForm {{
+        background-color: rgba(40, 40, 60, 0.7);
+        padding: 20px;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }}
+    
+    /* Input fields - dark theme */
+    .stTextInput > div > div > input,
+    .stNumberInput > div > div > input,
+    .stTextArea > div > div > textarea,
+    .stDateInput > div > div > input {{
+        background-color: rgba(30, 30, 40, 0.8);
+        color: white !important;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 6px;
+    }}
+    
+    .stTextInput > div > div > input::placeholder,
+    .stTextArea > div > div > textarea::placeholder {{
+        color: rgba(255, 255, 255, 0.5) !important;
+    }}
+    
+    /* Checkbox and radio buttons */
+    .stCheckbox, .stRadio {{
+        color: white !important;
+    }}
+    
+    .stCheckbox > label, .stRadio > label {{
+        color: white !important;
+    }}
+    
+    /* Select boxes */
+    .stSelectbox > div > div > select {{
+        background-color: rgba(30, 30, 40, 0.8);
+        color: white !important;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }}
+    
+    /* Slider */
+    .stSlider > div > div > div > div {{
+        background-color: rgba(255, 255, 255, 0.1);
+    }}
+    
+    .stSlider > div > div > div > div > div {{
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }}
+    
+    /* Success/Error messages */
+    .stAlert {{
+        border-radius: 8px;
+        border: none;
+        background-color: rgba(30, 30, 40, 0.9) !important;
+        color: white !important;
+    }}
+    
+    .element-container .stAlert {{
+        background-color: rgba(30, 30, 40, 0.9) !important;
+    }}
+    
+    /* Tabs */
+    .stTabs {{
+        background-color: transparent;
+    }}
+    
+    .stTabs > div > div > button {{
+        color: white !important;
+        background-color: rgba(40, 40, 60, 0.7) !important;
+    }}
+    
+    .stTabs > div > div > button[data-baseweb="tab"][aria-selected="true"] {{
+        background-color: rgba(102, 126, 234, 0.8) !important;
+        color: white !important;
+    }}
+    
+    /* Expander */
+    .streamlit-expanderHeader {{
+        background-color: rgba(40, 40, 60, 0.7) !important;
+        color: white !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    }}
+    
+    /* Custom scrollbar for night mode */
+    ::-webkit-scrollbar {{
+        width: 8px;
+    }}
+    
+    ::-webkit-scrollbar-track {{
+        background: rgba(30, 30, 40, 0.8);
+    }}
+    
+    ::-webkit-scrollbar-thumb {{
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 4px;
+    }}
+    
+    ::-webkit-scrollbar-thumb:hover {{
+        background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+    }}
+    
+    /* Fix for plotly charts background */
+    .js-plotly-plot .plotly .modebar {{
+        background-color: rgba(30, 30, 40, 0.8) !important;
+    }}
+    
+    /* Table borders */
+    table {{
+        border-color: rgba(255, 255, 255, 0.1) !important;
+    }}
+    
+    th, td {{
+        border-color: rgba(255, 255, 255, 0.1) !important;
+    }}
+    
+    /* Code blocks */
+    .stCode {{
+        background-color: rgba(20, 20, 30, 0.9) !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    }}
+    
+    /* Divider */
+    hr {{
+        border-color: rgba(255, 255, 255, 0.1) !important;
+    }}
+    </style>
+    """, unsafe_allow_html=True)
+
+# ========== HELPER FUNCTIONS ==========
+def get_current_theme():
+    """Get current theme"""
+    return st.session_state.get('theme', 'day')
+
+def get_current_wallpaper():
+    """Get current wallpaper"""
+    return st.session_state.get('wallpaper', None)
+
+def set_theme(theme_name):
+    """Set theme"""
+    st.session_state.theme = theme_name

@@ -3,18 +3,17 @@ from datetime import date
 import json
 
 def show_order_form(conn, ln):
-    # Header Title
-    st.markdown("### 📏 AZAD TAILOR - New Order Form")
+    st.markdown("### 📏 AZAD TAILOR - Detailed Order Form")
     
-    # Form Shuru
+    # Form shuru hota hai
     with st.form("complete_order_form", clear_on_submit=True):
         
         # --- SECTION 1: HEADER INFO ---
-        col_h1, col_h2, col_h3 = st.columns(3)
+        col_h1, col_h2, col_h3, col_h4 = st.columns(4)
         order_no = col_h1.text_input("Order No.", placeholder="e.g. 1793")
-        # ln.get use kiya hai taake agar key missing ho to error na aaye
         client_name = col_h2.text_input("Client Name")
         phone_number = col_h3.text_input("WhatsApp Number")
+        total_suits = col_h4.number_input("No. of Suits", min_value=1, step=1, value=1)
 
         st.divider()
 
@@ -27,7 +26,7 @@ def show_order_form(conn, ln):
             chest = st.text_input("Chest")
             s_length = st.text_input("Shalwar Length", placeholder="40")
             p_hip = st.text_input("Pajama Hip")
-            shirt_len = st.text_input("Shirt Length")
+            shirt_len = st.text_input("Front Shirt Length")
 
         with m2:
             sleeves = st.text_input("Sleeves", placeholder="25 1/2")
@@ -49,7 +48,7 @@ def show_order_form(conn, ln):
 
         st.divider()
 
-        # --- SECTION 3: STYLE OPTIONS ---
+        # --- SECTION 3: STYLE & DESIGN OPTIONS ---
         st.subheader("✂️ Style & Design Options")
         s1, s2, s3, s4 = st.columns(4)
 
@@ -83,19 +82,21 @@ def show_order_form(conn, ln):
         st.divider()
 
         # --- SECTION 4: BILL & NOTES ---
-        b1, b2 = st.columns(2)
-        total = b1.number_input("Total Bill", min_value=0)
-        advance = b2.number_input("Advance Payment", min_value=0)
-        
-        verbal_notes = st.text_area("🗣️ Verbal Summary / Special Notes", placeholder="e.g. Collar loose rakhna...")
+        b1, b2, b3 = st.columns(3)
+        total_bill = b1.number_input("Total Bill", min_value=0, step=10)
+        advance_paid = b2.number_input("Advance Payment", min_value=0, step=10)
+        balance_due = total_bill - advance_paid
+        b3.markdown(f"### Balance \n # Rs. {balance_due}")
 
-        # --- SUBMIT BUTTON (ZAROORI) ---
-        submit_button = st.form_submit_button("✅ SAVE COMPLETE ORDER")
+        verbal_notes = st.text_area("🗣️ Verbal Summary / Special Notes", 
+                                     placeholder="E.g. 17-6-1/4 swa, ya koi aur makhsoos nishani...")
 
-        if submit_button:
+        # --- SECTION 5: SUBMIT BUTTON ---
+        if st.form_submit_button("✅ SAVE COMPLETE ORDER"):
             if client_name and order_no:
-                # Sara data JSON mein save karne ke liye
-                full_m_data = json.dumps({
+                # Measurements aur Styles ko ek saath JSON mein pack karna
+                m_data_obj = {
+                    "num_suits": total_suits,
                     "measurements": {
                         "Length": length, "Sleeves": sleeves, "Shoulder": shoulder, "Collar": collar,
                         "Chest": chest, "Lower Chest": l_chest, "Waist": waist, "Hip": hip,
@@ -104,30 +105,36 @@ def show_order_form(conn, ln):
                         "Pajama Bottom": p_bottom, "Fly": fly, "Shirt Length": shirt_len
                     },
                     "styles": {
-                        "Shirt Collar": shirt_collar, "Sherwani Collar": sherwani_collar,
-                        "Cuff": cuff_sleeves, "Kurta": kurta_sleeves, "Gol": gol_daman,
-                        "Side Pocket": side_pocket, "Front Pocket": front_pocket,
-                        "Smart Fit": smart_fit, "Gum Silai": gum_silai
+                        "Shirt Collar": shirt_collar, "Sherwani Collar": sherwani_collar, "Sada": sada_neck,
+                        "Cuff": cuff_sleeves, "Kurta": kurta_sleeves, "Gol": gol_daman, 
+                        "Chakor": chakor_daman, "Side Pocket": side_pocket, "Front Pocket": front_pocket,
+                        "Smart Fit": smart_fit, "Gum Silai": gum_silai, "Double Silai": double_silai
                     }
-                })
+                }
+                
+                m_data_json = json.dumps(m_data_obj)
 
                 try:
                     cur = conn.cursor()
-                    # Query for your database
+                    
+                    # Error Fix: Query mein is_synced=0 (for hybrid) aur columns ki setting
                     query = """INSERT INTO orders 
                                (user_id, client_name, client_phone, total_bill, paid_amount, balance, 
-                                order_date, status, measurement_data, notes, order_no) 
-                               VALUES (?,?,?,?,?,?,?,?,?,?,?)"""
+                                order_date, status, measurement_data, notes, order_no, is_synced) 
+                               VALUES (?,?,?,?,?,?,?,?,?,?,?,?)"""
                     
                     cur.execute(query, (
                         st.session_state.u_id, client_name, phone_number, 
-                        total, advance, (total - advance), date.today().strftime("%Y-%m-%d"), 
-                        "Pending", full_m_data, verbal_notes, order_no
+                        total_bill, advance_paid, balance_due, 
+                        date.today().strftime("%Y-%m-%d"), "Pending", 
+                        m_data_json, verbal_notes, order_no, 0
                     ))
                     conn.commit()
-                    st.success(f"🎉 Order #{order_no} for {client_name} saved!")
+                    st.success(f"🎉 Order #{order_no} for {client_name} ({total_suits} Suits) saved locally!")
                     st.balloons()
+                
                 except Exception as e:
                     st.error(f"❌ Database Error: {e}")
+                    st.info("💡 Solution: Please check if 'measurement_data', 'order_no' and 'is_synced' columns exist in your 'orders' table.")
             else:
-                st.warning("⚠️ Please fill Client Name and Order Number!")
+                st.error("⚠️ Order Number and Client Name are required!")

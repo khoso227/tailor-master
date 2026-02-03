@@ -8,46 +8,53 @@ def show_order_form(conn, ln=None):
     
     user_id = st.session_state.get('user_id', 1)
     
-    # Quick add existing customer option (OUTSIDE FORM)
+    # Quick add existing customer option
+    if 'prefilled_customer' not in st.session_state:
+        st.session_state.prefilled_customer = {}
+    
     with st.expander("⚡ Quick Add - Existing Customer", expanded=False):
         search_term = st.text_input("Search customer by name or phone", key="quick_search")
         
         if search_term:
-            from database import quick_search_customers
-            customers = quick_search_customers(search_term, user_id)
-            
-            if customers:
-                selected_option = st.selectbox(
-                    "Select Customer",
-                    options=[f"{c['name']} ({c['phone']})" + (f" - {c.get('email', '')}" if c.get('email') else "") for c in customers],
-                    key="quick_customer_select"
-                )
+            try:
+                from database import quick_search_customers
+                customers = quick_search_customers(search_term, user_id)
                 
-                if selected_option:
-                    # Pre-fill form with customer details
-                    selected_customer = [c for c in customers 
-                                       if f"{c['name']} ({c['phone']})" + (f" - {c.get('email', '')}" if c.get('email') else "") == selected_option][0]
+                if customers:
+                    customer_options = [f"{c['name']} ({c['phone']})" + (f" - {c.get('email', '')}" if c.get('email') else "") for c in customers]
+                    selected_option = st.selectbox(
+                        "Select Customer",
+                        options=customer_options,
+                        key="quick_customer_select"
+                    )
                     
-                    # Auto-fill using session state (NO BUTTON INSIDE EXPANDER)
-                    st.session_state.prefilled_customer = {
-                        'name': selected_customer['name'],
-                        'phone': selected_customer['phone'],
-                        'email': selected_customer.get('email', ''),
-                        'address': selected_customer.get('address', '')
-                    }
-                    st.rerun()
-            else:
-                st.info("No customers found")
+                    if selected_option:
+                        # Find selected customer
+                        selected_customer = [c for c in customers if f"{c['name']} ({c['phone']})" + (f" - {c.get('email', '')}" if c.get('email') else "") == selected_option][0]
+                        
+                        # Auto-fill using session state
+                        if st.button("Use This Customer", key="use_customer_btn"):
+                            st.session_state.prefilled_customer = {
+                                'name': selected_customer['name'],
+                                'phone': selected_customer['phone'],
+                                'email': selected_customer.get('email', ''),
+                                'address': selected_customer.get('address', '')
+                            }
+                            st.rerun()
+                else:
+                    st.info("No customers found")
+            except:
+                st.info("Customer search feature coming soon")
     
     # Check for pre-filled customer data
-    prefilled = st.session_state.get('prefilled_customer', {})
+    prefilled = st.session_state.prefilled_customer
     
     # Initialize session state for order success
     if 'order_saved' not in st.session_state:
         st.session_state.order_saved = False
         st.session_state.saved_order_details = {}
     
-    # If order was just saved, show success message and options
+    # If order was just saved, show success message
     if st.session_state.order_saved:
         show_order_success(st.session_state.saved_order_details)
         return
@@ -70,14 +77,14 @@ def show_order_form(conn, ln=None):
             delivery_date = st.date_input("D/Date (Delivery Date)*", value=default_delivery)
         
         with col_h4:
-            total_suits = st.number_input("No. of Suits*", min_value=1, step=1, value=1, key="suits_input")
+            total_suits = st.number_input("No. of Suits*", min_value=1, step=1, value=1)
 
         col_u1, col_u2 = st.columns(2)
-        client_name = col_u1.text_input("Client Name*", value=prefilled.get('name', ''), key="client_name_input")
-        phone_number = col_u2.text_input("WhatsApp Number*", value=prefilled.get('phone', ''), key="phone_input")
+        client_name = col_u1.text_input("Client Name*", value=prefilled.get('name', ''))
+        phone_number = col_u2.text_input("WhatsApp Number*", value=prefilled.get('phone', ''))
 
         # Address field
-        address = st.text_area("Address", value=prefilled.get('address', ''), key="address_input")
+        address = st.text_area("Address", value=prefilled.get('address', ''))
         
         st.divider()
 
@@ -86,29 +93,29 @@ def show_order_form(conn, ln=None):
         m1, m2, m3, m4 = st.columns(4)
         
         with m1:
-            length = st.text_input("Length", placeholder="e.g. 42 1/2", key="length_input")
-            chest = st.text_input("Chest", key="chest_input")
-            s_length = st.text_input("Shalwar Length", placeholder="40", key="shalwar_len_input")
-            p_hip = st.text_input("Hip (Pajama)", key="p_hip_input")
-            shirt_len = st.text_input("Front Shirt Length", key="shirt_len_input")
+            length = st.text_input("Length", placeholder="e.g. 42 1/2")
+            chest = st.text_input("Chest")
+            s_length = st.text_input("Shalwar Length", placeholder="40")
+            p_hip = st.text_input("Hip (Pajama)")
+            shirt_len = st.text_input("Front Shirt Length")
 
         with m2:
-            sleeves = st.text_input("Sleeves", placeholder="25 1/2", key="sleeves_input")
-            l_chest = st.text_input("Lower Chest", placeholder="48", key="l_chest_input")
-            bottom = st.text_input("Bottom (Pancha)", placeholder="20", key="bottom_input")
-            thigh = st.text_input("Thigh (Raan)", key="thigh_input")
+            sleeves = st.text_input("Sleeves", placeholder="25 1/2")
+            l_chest = st.text_input("Lower Chest", placeholder="48")
+            bottom = st.text_input("Bottom (Pancha)", placeholder="20")
+            thigh = st.text_input("Thigh (Raan)")
 
         with m3:
-            shoulder = st.text_input("Shoulder", placeholder="20 1/2", key="shoulder_input")
-            waist = st.text_input("Waist", key="waist_input")
-            p_length = st.text_input("Pajama Length", key="p_length_input")
-            p_bottom = st.text_input("Pajama Bottom", key="p_bottom_input")
+            shoulder = st.text_input("Shoulder", placeholder="20 1/2")
+            waist = st.text_input("Waist")
+            p_length = st.text_input("Pajama Length")
+            p_bottom = st.text_input("Pajama Bottom")
 
         with m4:
-            collar = st.text_input("Collar", placeholder="17 1/2", key="collar_input")
-            hip = st.text_input("Hip / Ghera", placeholder="28", key="hip_input")
-            p_waist = st.text_input("Waist (Pajama)", key="p_waist_input")
-            fly = st.text_input("Fly (Asan)", key="fly_input")
+            collar = st.text_input("Collar", placeholder="17 1/2")
+            hip = st.text_input("Hip / Ghera", placeholder="28")
+            p_waist = st.text_input("Waist (Pajama)")
+            fly = st.text_input("Fly (Asan)")
 
         st.divider()
 
@@ -118,35 +125,35 @@ def show_order_form(conn, ln=None):
 
         with s1:
             st.write("**Neck**")
-            shirt_collar = st.checkbox("Shirt Collar", key="shirt_collar_cb")
-            sherwani_collar = st.checkbox("Sherwani Collar", key="sherwani_collar_cb")
-            sada = st.checkbox("Sada", key="sada_cb")
-            design = st.checkbox("Design", key="design_cb")
-            design_no = st.text_input("Design Number", placeholder="e.g. D123", key="design_no_input")
+            shirt_collar = st.checkbox("Shirt Collar")
+            sherwani_collar = st.checkbox("Sherwani Collar")
+            sada = st.checkbox("Sada")
+            design = st.checkbox("Design")
+            design_no = st.text_input("Design Number", placeholder="e.g. D123")
 
         with s2:
             st.write("**Sleeves/Daman**")
-            cuff_sleeves = st.checkbox("Cuff Aasteen", key="cuff_sleeves_cb")
-            kurta_sleeves = st.checkbox("Kurta Aasteen", key="kurta_sleeves_cb")
-            gol_daman = st.checkbox("Gol Daman", key="gol_daman_cb")
-            chakor_daman = st.checkbox("Chakor Daman", key="chakor_daman_cb")
-            shalwar_ghera = st.checkbox("Shalwar Ghera", key="shalwar_ghera_cb")
+            cuff_sleeves = st.checkbox("Cuff Aasteen")
+            kurta_sleeves = st.checkbox("Kurta Aasteen")
+            gol_daman = st.checkbox("Gol Daman")
+            chakor_daman = st.checkbox("Chakor Daman")
+            shalwar_ghera = st.checkbox("Shalwar Ghera")
 
         with s3:
             st.write("**Pockets**")
-            side_pocket = st.checkbox("Side Pocket", key="side_pocket_cb")
-            front_pocket = st.checkbox("Front Pocket", key="front_pocket_cb")
-            shalwar_pocket = st.checkbox("Shalwar Pocket", key="shalwar_pocket_cb")
-            pajama_pocket = st.checkbox("Pajama Pocket", key="pajama_pocket_cb")
-            losing = st.checkbox("Losing (Extra Loose)", key="losing_cb")
+            side_pocket = st.checkbox("Side Pocket")
+            front_pocket = st.checkbox("Front Pocket")
+            shalwar_pocket = st.checkbox("Shalwar Pocket")
+            pajama_pocket = st.checkbox("Pajama Pocket")
+            losing = st.checkbox("Losing (Extra Loose)")
 
         with s4:
             st.write("**Fitting/Silai**")
-            smart_fit = st.checkbox("Smart Fit", key="smart_fit_cb")
-            normal_fit = st.checkbox("Normal Fit", key="normal_fit_cb")
-            gum_silai = st.checkbox("Gum Silai", key="gum_silai_cb")
-            double_silai = st.checkbox("Double Silai", key="double_silai_cb")
-            side_pocket_qty = st.number_input("Side Pocket Qty", 0, 2, 0, key="side_pocket_qty_input")
+            smart_fit = st.checkbox("Smart Fit")
+            normal_fit = st.checkbox("Normal Fit")
+            gum_silai = st.checkbox("Gum Silai")
+            double_silai = st.checkbox("Double Silai")
+            side_pocket_qty = st.number_input("Side Pocket Qty", 0, 2, 0)
 
         st.divider()
 
@@ -154,23 +161,25 @@ def show_order_form(conn, ln=None):
         col_p1, col_p2, col_p3 = st.columns(3)
         
         with col_p1:
-            total_bill = st.number_input("Total Bill*", min_value=0, step=10, value=0, key="total_bill_input")
+            total_bill = st.number_input("Total Bill*", min_value=0, step=10, value=0)
         
         with col_p2:
-            advance_paid = st.number_input("Advance Payment", min_value=0, step=10, value=0, key="advance_input")
+            advance_paid = st.number_input("Advance Payment", min_value=0, step=10, value=0)
         
         with col_p3:
+            # Calculate balance (display only, not interactive)
             balance_due = total_bill - advance_paid
-            st.metric("Balance Due", f"₹{balance_due}", key="balance_metric")
+            # Display balance as text instead of st.metric()
+            st.write("**Balance Due:**")
+            st.markdown(f"<h3 style='color: #e74c3c;'>₹{balance_due}</h3>", unsafe_allow_html=True)
 
         verbal_notes = st.text_area("🗣️ Verbal Summary / Special Notes", 
-                                     placeholder="E.g. 17-6-1/4 swa, ya koi aur makhsoos nishani...",
-                                     key="notes_input")
+                                     placeholder="E.g. 17-6-1/4 swa, ya koi aur makhsoos nishani...")
 
         # Urgent order option
-        urgent_order = st.checkbox("🚨 Mark as Urgent Order", key="urgent_checkbox")
+        urgent_order = st.checkbox("🚨 Mark as Urgent Order")
 
-        # --- SECTION 5: FORM SUBMIT BUTTON (ONLY ONE IN FORM) ---
+        # --- SECTION 5: FORM SUBMIT BUTTON (MUST USE st.form_submit_button) ---
         submitted = st.form_submit_button("✅ SAVE COMPLETE ORDER")
         
         if submitted:
@@ -244,7 +253,10 @@ def show_order_form(conn, ln=None):
                     # Clear pre-filled data
                     if 'prefilled_customer' in st.session_state:
                         del st.session_state.prefilled_customer
+                    # Rerun to show success page
                     st.rerun()
+                else:
+                    st.error("Failed to save order. Please try again.")
 
 def save_order_to_db(**kwargs):
     """Save order to database and return success status"""
@@ -404,7 +416,7 @@ def save_order_to_db(**kwargs):
         return False, {"error": str(e)}
 
 def show_order_success(order_details):
-    """Show success message and next steps (COMPLETELY OUTSIDE FORM)"""
+    """Show success message and next steps"""
     st.success(f"🎉 Order #{order_details['order_no']} for {order_details['client_name']} ({order_details['suits']} Suits) saved successfully!")
     st.balloons()
     

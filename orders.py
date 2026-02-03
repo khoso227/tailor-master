@@ -1,206 +1,78 @@
 import streamlit as st
-import pandas as pd
-from datetime import datetime
-from database import get_all_orders, update_order_status, get_order_status_history, get_today_summary
+import json
+from datetime import date
+from database import get_connection
 
-def show_orders_page():
-    st.title("📋 Orders Management")
+def add_order_ui(user_id):
+    st.header("📏 Detailed Measurement Form")
     
-    # Get current user ID from session (default to 1 for admin)
-    user_id = st.session_state.get('user_id', 1)
-    
-    # Tab layout
-    tab1, tab2 = st.tabs(["Order Tracking", "Today's Summary"])
-    
-    with tab1:
-        # Order Status Workflow Section
-        st.subheader("Order Status Tracking")
+    with st.form("azad_tailor_form"):
+        # Section 1: Basic
+        c1, c2, c3 = st.columns(3)
+        name = c1.text_input("Client Name")
+        phone = c2.text_input("WhatsApp Number")
+        order_no = c3.text_input("Slip/Order No.", placeholder="e.g. 1793")
+
+        st.markdown("---")
         
-        # Status filter
-        col_filter1, col_filter2 = st.columns([2, 1])
+        # Section 2: Measurements (Azad Tailor Copy)
+        m_col1, m_col2 = st.columns([2, 1])
         
-        with col_filter1:
-            status_filter = st.selectbox(
-                "Filter by Status",
-                ["All", "Pending", "Cutting", "Stitching", "Fitting", "Ready", "Delivered", "Urgent"]
-            )
-        
-        # Search functionality
-        with col_filter2:
-            search_term = st.text_input("Search (Name/Order No)", "")
-        
-        # Get all orders
-        orders = get_all_orders(user_id=user_id, status_filter=status_filter if status_filter != "All" else None)
-        
-        if not orders:
-            st.info("No orders found")
-        
-        else:
-            # Convert to DataFrame
-            df = pd.DataFrame(orders)
+        with m_col1:
+            st.subheader("👕 Shirt & Shalwar")
+            row1 = st.columns(3)
+            l_len = row1[0].text_input("Length")
+            l_slv = row1[1].text_input("Sleeves")
+            l_shl = row1[2].text_input("Shoulder")
             
-            # Apply search filter
-            if search_term:
-                search_mask = (
-                    df['client_name'].str.contains(search_term, case=False, na=False) |
-                    df['order_no'].astype(str).str.contains(search_term, case=False, na=False) |
-                    df['client_phone'].astype(str).str.contains(search_term, case=False, na=False)
-                )
-                df = df[search_mask]
+            row2 = st.columns(3)
+            l_col = row2[0].text_input("Collar")
+            l_chst = row2[1].text_input("Chest")
+            l_lchst = row2[2].text_input("Lower Chest")
             
-            if df.empty:
-                st.info("No orders match your search criteria")
+            row3 = st.columns(3)
+            l_wst = row3[0].text_input("Waist")
+            l_hip = row3[1].text_input("Hip / Ghera")
+            l_slen = row3[2].text_input("Shalwar Length")
             
+            row4 = st.columns(3)
+            l_sbot = row4[0].text_input("Shalwar Bottom")
+            l_thigh = row4[1].text_input("Thigh")
+            l_fly = row4[2].text_input("Fly (Asan)")
+
+        with m_col2:
+            st.subheader("🎨 Styles")
+            s_col = st.checkbox("Sherwani Collar")
+            cuf = st.checkbox("Cuff Sleeves")
+            gol = st.checkbox("Gol Daman")
+            gum = st.checkbox("Gum Silai")
+            fit = st.radio("Fitting", ["Normal", "Loose", "Smart"])
+            
+            st.divider()
+            total = st.number_input("Total Bill", min_value=0)
+            adv = st.number_input("Advance", min_value=0)
+            pay = st.selectbox("Payment Via", ["Cash", "EasyPaisa", "JazzCash", "Bank Transfer"])
+            dd = st.date_input("Delivery Date")
+
+        st.markdown("---")
+        verbal = st.text_area("🗣️ Verbal Details & Special Requirements", placeholder="Yahan client ki zubani baten likhen...")
+
+        if st.form_submit_button("✅ SAVE ORDER"):
+            if name and phone:
+                conn = get_connection()
+                rem = total - adv
+                m_data = {
+                    "Length": l_len, "Sleeves": l_slv, "Shoulder": l_shl, "Collar": l_col,
+                    "Chest": l_chst, "Waist": l_wst, "Hip": l_hip, "Sh_Length": l_slen, 
+                    "Thigh": l_thigh, "Fly": l_fly, "Fitting": fit
+                }
+                
+                query = '''INSERT INTO clients 
+                    (user_id, order_no, name, phone, total, advance, remaining, pay_method, order_date, delivery_date, m_data, verbal_notes) 
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?)'''
+                
+                conn.execute(query, (user_id, order_no, name, phone, total, adv, rem, pay, str(date.today()), str(dd), json.dumps(m_data), verbal))
+                conn.commit()
+                st.success(f"Order #{order_no} Saved!")
             else:
-                # Display orders with status update option
-                for _, order in df.iterrows():
-                    # Determine status color
-                    status_colors = {
-                        'Pending': '⚪',
-                        'Cutting': '🔵', 
-                        'Stitching': '🟡',
-                        'Fitting': '🟠',
-                        'Ready': '🟢',
-                        'Delivered': '✅',
-                        'Urgent': '🚨'
-                    }
-                    
-                    status_icon = status_colors.get(order.get('status', 'Pending'), '⚪')
-                    
-                    with st.expander(f"{status_icon} Order #{order.get('id', '')} - {order.get('client_name', 'N/A')} - {order.get('status', 'Pending')}"):
-                        col1, col2 = st.columns([3, 1])
-                        
-                        with col1:
-                            st.write(f"**Order No:** {order.get('order_no', 'N/A')}")
-                            st.write(f"**Order Date:** {order.get('order_date', 'N/A')}")
-                            st.write(f"**Delivery Date:** {order.get('delivery_date', 'N/A')}")
-                            st.write(f"**Suits:** {order.get('suits', 1)}")
-                            st.write(f"**Total Bill:** ₹{order.get('total_bill', 0)}")
-                            st.write(f"**Advance:** ₹{order.get('advance', 0)}")
-                            st.write(f"**Balance:** ₹{order.get('balance', 0)}")
-                            
-                            if order.get('notes'):
-                                st.write(f"**Notes:** {order.get('notes')}")
-                        
-                        with col2:
-                            # Status update dropdown
-                            current_status = order.get('status', 'Pending')
-                            status_options = ["Pending", "Cutting", "Stitching", "Fitting", "Ready", "Delivered", "Urgent"]
-                            
-                            # Handle case where current status might not be in standard options
-                            if current_status not in status_options:
-                                status_options = [current_status] + [s for s in ["Pending", "Cutting", "Stitching", "Fitting", "Ready", "Delivered", "Urgent"] if s != current_status]
-                            
-                            new_status = st.selectbox(
-                                "Update Status",
-                                status_options,
-                                index=status_options.index(current_status),
-                                key=f"status_{order.get('id')}"
-                            )
-                            
-                            update_notes = st.text_area(
-                                "Status Notes (Optional)",
-                                key=f"notes_{order.get('id')}",
-                                height=60
-                            )
-                            
-                            col_btn1, col_btn2 = st.columns(2)
-                            
-                            with col_btn1:
-                                if st.button("Update", key=f"update_{order.get('id')}"):
-                                    update_order_status(order.get('id'), new_status, update_notes)
-                                    st.success(f"Status updated to {new_status}")
-                                    st.rerun()
-                            
-                            with col_btn2:
-                                if st.button("History", key=f"history_{order.get('id')}"):
-                                    history = get_order_status_history(order.get('id'))
-                                    if history:
-                                        st.write("### Status History")
-                                        for h in history:
-                                            st.write(f"**{h.get('status', 'N/A')}** - {h.get('timestamp', 'N/A')}")
-                                            if h.get('notes'):
-                                                st.write(f"*Notes:* {h.get('notes')}")
-                                    else:
-                                        st.info("No status history available")
-                            
-                            # Quick actions
-                            st.markdown("---")
-                            if st.button("📱 Contact", key=f"contact_{order.get('id')}"):
-                                phone = order.get('client_phone', '')
-                                if phone:
-                                    st.info(f"Call/WhatsApp: {phone}")
-                                else:
-                                    st.warning("No phone number available")
-    
-    with tab2:
-        # Today's summary card
-        st.subheader("📊 Today's Summary")
-        
-        summary = get_today_summary(user_id=user_id)
-        
-        col1, col2, col3, col4 = st.columns(4)
-        
-        with col1:
-            st.metric("Today's Orders", summary['today_orders'])
-        
-        with col2:
-            st.metric("Today's Deliveries", summary['today_deliveries'])
-        
-        with col3:
-            st.metric("Today's Revenue", f"₹{summary['today_revenue']}")
-        
-        with col4:
-            st.metric("Payments Received", f"₹{summary['today_payments']}")
-        
-        # Pending and Outstanding
-        col5, col6 = st.columns(2)
-        
-        with col5:
-            st.metric("Pending Orders", summary['pending_orders'])
-        
-        with col6:
-            st.metric("Total Outstanding", f"₹{summary['total_outstanding']}")
-        
-        # Show today's orders in a table
-        st.subheader("📋 Today's Orders")
-        
-        today = datetime.now().strftime("%Y-%m-%d")
-        today_orders = [o for o in orders if o.get('order_date') == today]
-        
-        if today_orders:
-            today_df = pd.DataFrame(today_orders)
-            
-            # Select only important columns for display
-            display_cols = ['client_name', 'order_no', 'status', 'total_bill', 'advance', 'balance']
-            available_cols = [col for col in display_cols if col in today_df.columns]
-            
-            if available_cols:
-                st.dataframe(today_df[available_cols], use_container_width=True)
-        else:
-            st.info("No orders placed today")
-        
-        # Delivery alerts
-        st.subheader("🚨 Upcoming Deliveries")
-        
-        # Get orders with delivery in next 3 days
-        upcoming_deliveries = []
-        for order in orders:
-            delivery_date = order.get('delivery_date')
-            if delivery_date:
-                try:
-                    delivery_dt = datetime.strptime(delivery_date, "%Y-%m-%d")
-                    days_diff = (delivery_dt - datetime.now()).days
-                    if 0 <= days_diff <= 3 and order.get('status') != 'Delivered':
-                        upcoming_deliveries.append(order)
-                except:
-                    pass
-        
-        if upcoming_deliveries:
-            for order in upcoming_deliveries:
-                st.warning(
-                    f"**{order.get('client_name')}** - Order #{order.get('order_no')} "
-                    f"due on {order.get('delivery_date')} ({order.get('status')})"
-                )
-        else:
-            st.info("No upcoming deliveries in next 3 days")
+                st.error("Name and Phone are required!")
